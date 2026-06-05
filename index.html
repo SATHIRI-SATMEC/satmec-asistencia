@@ -895,13 +895,6 @@ var APP = (function() {
     renderTable(filtered);
     updateStats(panelRecs);
     renderProyFilter(panelRecs);
-    // Actualizar stat-total con el filtro actual
-    document.getElementById('st-total').textContent = filtered.length;
-    var trabSet = new Set(filtered.map(function(r){ return r.trabajador; }).filter(Boolean));
-    document.getElementById('st-trab').textContent = trabSet.size;
-    var validF = filtered.filter(function(r){ return !isNaN(parseFloat(r.horas_efectivas)) && parseFloat(r.horas_efectivas)>0; });
-    var totalHF = validF.reduce(function(s,r){ return s+parseFloat(r.horas_efectivas); },0);
-    document.getElementById('st-hrs').textContent = (validF.length>0?(totalHF/validF.length).toFixed(1):'0')+'h';
   }
 
   function applyFilters(rows) {
@@ -925,6 +918,7 @@ var APP = (function() {
       tbody.innerHTML = '<tr><td colspan="7" class="loading-text">Sin registros</td></tr>';
       document.getElementById('st-total').textContent = '0';
       document.getElementById('st-trab').textContent = '0';
+      document.getElementById('st-proy').textContent = '0';
       document.getElementById('st-hrs').textContent = '0h';
       return;
     }
@@ -1023,17 +1017,12 @@ var APP = (function() {
   }
 
   function updateStats(rows) {
-    var hoy = new Date().toISOString().split('T')[0];
-    var hoyR = rows.filter(function(r) {
-      var fd = typeof r.fecha==='string' ? r.fecha.slice(0,10) : (r._fecha||'');
-      return fd === hoy;
-    });
-    var proySet = new Set(rows.map(function(r) { return r.proyecto; }).filter(Boolean));
-    var validRows = rows.filter(function(r) { return !isNaN(parseFloat(r.horas_efectivas)) && parseFloat(r.horas_efectivas) > 0; });
+    var filtered = applyFilters(rows);
+    // Contar solo proyectos que aparecen en el filtro actual
+    var proySet = new Set(filtered.map(function(r) { return r.proyecto; }).filter(Boolean));
+    var validRows = filtered.filter(function(r) { return !isNaN(parseFloat(r.horas_efectivas)) && parseFloat(r.horas_efectivas) > 0; });
     var totalH = validRows.reduce(function(s,r) { return s + parseFloat(r.horas_efectivas); }, 0);
     var prom = validRows.length > 0 ? (totalH / validRows.length).toFixed(1) : '0';
-    // Usar filtro actual para registros de hoy
-    var filtered = applyFilters(rows);
     document.getElementById('st-total').textContent = filtered.length;
     document.getElementById('st-trab').textContent = new Set(filtered.map(function(r) { return r.trabajador; }).filter(Boolean)).size;
     document.getElementById('st-proy').textContent = proySet.size;
