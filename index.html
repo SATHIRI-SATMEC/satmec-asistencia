@@ -424,29 +424,11 @@ var APP = (function() {
   var selColor = '#0d2b5e';
   var confirmCb = null;
 
-  var PROY_DEFAULT = [
-    {nombre:'EPMMOP - Parques Fase 1',cliente:'EPMMOP',contrato:'005-GAPEV-EPMMOP-2026',estado:'activo',color:'#0d2b5e'},
-    {nombre:'EPMAPS - Contrato 4300002266',cliente:'EPMAPS',contrato:'4300002266',estado:'activo',color:'#1e7a3a'},
-    {nombre:'SATMEC - Rehab. Piso Industrial',cliente:'Privado',contrato:'',estado:'activo',color:'#e88f00'},
-    {nombre:'SATMEC - Rampas Vehiculares',cliente:'Privado',contrato:'',estado:'activo',color:'#c0522a'},
-    {nombre:'U.E. Espiitu Santo - Mantenimiento',cliente:'Privado',contrato:'',estado:'activo',color:'#6d3daa'},
-    {nombre:'Chaide - Mantenimiento',cliente:'Privado',contrato:'',estado:'activo',color:'#1a7a7a'},
-  ];
-  var SUPS_DEFAULT = [
-    {nombre:'Ing. Jorge Garcia',cargo:'Gerente General'},
-    {nombre:'Arq. Mariela Leiva',cargo:'Directora de Proyectos'},
-  ];
+  var PROY_DEFAULT = [];
+  var SUPS_DEFAULT = [];
   var supervisores = [];
 
-  var PERS_DEFAULT = [
-    {nombre:'Juan Moposita',cargo:'Maestro Mayor'},
-    {nombre:'Carlos Tipan',cargo:'Albanil'},
-    {nombre:'Luis Gualpa',cargo:'Ayudante'},
-    {nombre:'Mario Cando',cargo:'Electricista'},
-    {nombre:'Pedro Quispe',cargo:'Soldador'},
-    {nombre:'Roberto Narvaez',cargo:'Plomero'},
-    {nombre:'Diego Lema',cargo:'Pintor'},
-  ];
+  var PERS_DEFAULT = [];
 
   // === INIT ===
   function init() {
@@ -536,7 +518,7 @@ var APP = (function() {
   function renderSupSelect() {
     var sel = document.getElementById('cfg-sup-sel');
     var prev = sel.value || localStorage.getItem('supName') || '';
-    sel.innerHTML = '<option value="">-- Seleccionar supervisor --</option>';
+    sel.innerHTML = '<option value="">-- Seleccionar o agregar supervisor --</option>';
     supervisores.forEach(function(s) {
       var o = document.createElement('option');
       o.value = s.nombre;
@@ -599,7 +581,7 @@ var APP = (function() {
   function renderWorkers() {
     var c = document.getElementById('worker-list');
     if (!personal.length) {
-      c.innerHTML = '<div class="empty"><div>&#128119;</div><p>Sin personal. Usa Gestionar para agregar.</p></div>';
+      c.innerHTML = '<div class="empty"><div>&#128119;</div><p>No hay personal registrado.<br>Toca <strong>"&#9881; Gestionar"</strong> para agregar trabajadores.</p></div>';
       return;
     }
     c.innerHTML = personal.map(function(w, i) {
@@ -673,7 +655,7 @@ var APP = (function() {
   function renderProySelect() {
     var sel = document.getElementById('sel-proy');
     var prev = sel.value;
-    sel.innerHTML = '<option value="">Seleccionar proyecto</option>';
+    sel.innerHTML = '<option value="">-- Seleccionar o agregar proyecto --</option>';
     proyectos.forEach(function(p, i) {
       if (p.estado !== 'cerrado') {
         var o = document.createElement('option');
@@ -693,7 +675,7 @@ var APP = (function() {
   function renderProyFullList() {
     var c = document.getElementById('proy-full-list');
     if (!c) return;
-    if (!proyectos.length) { c.innerHTML = '<div class="empty"><div>&#128193;</div><p>Sin proyectos.</p></div>'; return; }
+    if (!proyectos.length) { c.innerHTML = '<div class="empty"><div>&#128193;</div><p>No hay proyectos registrados.<br>Haga clic en <strong>"+ Agregar nuevo proyecto"</strong> para comenzar.</p></div>'; return; }
     c.innerHTML = proyectos.map(function(p, i) {
       return '<div class="card" style="border-left:4px solid ' + p.color + '">' +
         '<div class="pi" style="padding:0">' +
@@ -708,7 +690,7 @@ var APP = (function() {
 
   function renderProyModal() {
     var c = document.getElementById('proy-list');
-    if (!proyectos.length) { c.innerHTML = '<div class="empty"><div>&#128193;</div><p>Sin proyectos.</p></div>'; return; }
+    if (!proyectos.length) { c.innerHTML = '<div class="empty"><div>&#128193;</div><p>Sin proyectos.<br>Ve a la pestana "+ Nuevo" para agregar.</p></div>'; return; }
     c.innerHTML = proyectos.map(function(p, i) {
       return '<div class="pi">' +
         '<div class="pdot" style="background:' + p.color + '"></div>' +
