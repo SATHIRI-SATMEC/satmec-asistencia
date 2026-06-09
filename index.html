@@ -384,6 +384,42 @@ tr:active td{background:var(--Pl)}
   display:flex;align-items:center;gap:12px;padding:14px;
   background:var(--Sb);border-radius:var(--rs);border-left:4px solid var(--S);
 }
+
+/* NÓMINA */
+.cargo-item{{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--g1)}}
+.cargo-item:last-child{{border-bottom:none}}
+.cargo-item input{{padding:10px 12px;font-size:14px}}
+.cargo-name{{flex:1.5}}
+.cargo-val{{flex:1}}
+.nom-row-pendiente td{{background:#fffdf0}}
+.nom-row-cancelado td{{background:var(--Sb);opacity:.7}}
+.nom-row-cancelado td *{{text-decoration:none}}
+.estado-badge{{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}}
+.est-pendiente{{background:#fef3dc;color:#9a6800}}
+.est-aprobado{{background:var(--Pl);color:var(--P)}}
+.est-cancelado{{background:var(--Sb);color:var(--S)}}
+.pago-card{{background:#fff;border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:var(--sh);border-left:4px solid}}
+.pago-card.pendiente{{border-left-color:#e8c060}}
+.pago-card.aprobado{{border-left-color:var(--P)}}
+.pago-card.cancelado{{border-left-color:var(--S)}}
+.gasto-bar{{height:10px;border-radius:5px;margin-top:6px;transition:width .5s}}
+.comprobante{{font-family:'DM Sans',sans-serif;padding:20px}}
+.comprobante-hdr{{background:linear-gradient(135deg,#0a1f44,#0d2b5e);color:#fff;padding:20px;border-radius:12px;margin-bottom:16px;text-align:center}}
+.comprobante-logo{{font-size:22px;font-weight:800;letter-spacing:1px}}
+.comprobante-sub{{font-size:11px;opacity:.7;margin-top:4px;text-transform:uppercase;letter-spacing:.8px}}
+.comprobante-num{{background:var(--A);color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-top:8px;display:inline-block}}
+.comp-row{{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--g2);font-size:13px}}
+.comp-row:last-child{{border-bottom:none}}
+.comp-row strong{{color:var(--P)}}
+.comp-total{{background:var(--Pl);border-radius:var(--rs);padding:14px;margin-top:12px;text-align:center}}
+.comp-total-val{{font-size:28px;font-weight:800;color:var(--P)}}
+.comp-total-lbl{{font-size:12px;color:var(--g4);margin-top:2px}}
+.comp-estado{{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;margin-top:10px}}
+@media print{{
+  .bottom-nav,.hdr,.accent-bar,.btn,.ptabs,.filter-row,.act-row,.card-title .btn{{display:none!important}}
+  .comprobante{{padding:0}}
+  body{{background:#fff}}
+}}
 </style>
 </head>
 <body>
@@ -720,6 +756,146 @@ function resp(d) {
   </div>
 </div>
 
+
+<!-- VISTA NÓMINA -->
+<div id="view-nomina" class="view">
+  <div class="alert alert-ok" id="alert-nom-ok"></div>
+  <div class="alert alert-err" id="alert-nom-err"></div>
+
+  <!-- TABS NÓMINA -->
+  <div class="ptabs">
+    <button class="ptab active" onclick="APP.sTabNom('calcular',this)">🧮 Calcular</button>
+    <button class="ptab" onclick="APP.sTabNom('pagos',this)">💳 Pagos</button>
+    <button class="ptab" onclick="APP.sTabNom('proyectos',this)">🏗️ Proyectos</button>
+  </div>
+
+  <!-- TAB CALCULAR -->
+  <div id="tab-nom-calcular">
+    <div class="card">
+      <div class="card-title"><span class="ct-ic">📅</span>Período de cálculo</div>
+      <div class="row2">
+        <div><label>Desde</label><input type="date" id="nom-desde"/></div>
+        <div><label>Hasta</label><input type="date" id="nom-hasta"/></div>
+      </div>
+      <label>Proyecto (opcional)</label>
+      <select id="nom-proy"><option value="">Todos los proyectos</option></select>
+      <button class="btn btn-P" style="margin-top:14px" onclick="APP.calcularNomina()">🧮 Calcular nómina</button>
+    </div>
+
+    <!-- Tabla de cargos y valores -->
+    <div class="card">
+      <div class="card-title"><span class="ct-ic">💵</span>Valores por cargo</div>
+      <p style="font-size:12px;color:var(--g4);margin-bottom:12px;line-height:1.5">Configure el valor diario (8h) por cada cargo. Las horas extras se calculan al 125%.</p>
+      <div id="cargo-list"></div>
+      <button class="btn btn-O" style="margin-top:12px;font-size:13px;padding:12px" onclick="APP.addCargo()">+ Agregar cargo</button>
+    </div>
+
+    <!-- Resultado nómina -->
+    <div id="nom-resultado" style="display:none">
+      <div class="card" style="border-left:4px solid var(--S)">
+        <div class="card-title"><span class="ct-ic">📋</span>Resumen de nómina</div>
+        <div id="nom-resumen-stats" class="stat-grid" style="margin-bottom:12px"></div>
+        <div id="nom-tabla-wrap" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Trabajador</th>
+                <th>Cargo</th>
+                <th>Días</th>
+                <th>H. Norm.</th>
+                <th>H. Extra</th>
+                <th>Subtotal</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="nom-tbody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-O" style="flex:1;font-size:13px;padding:12px" onclick="APP.exportNominaCSV()">⬇ CSV</button>
+          <button class="btn btn-P" style="flex:1;font-size:13px;padding:12px" onclick="APP.pagarTodos()">💳 Pagar todos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB PAGOS -->
+  <div id="tab-nom-pagos" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="ct-ic">🔍</span>Filtrar pagos</div>
+      <div class="row2">
+        <div>
+          <label>Estado</label>
+          <select id="pag-estado-filtro" onchange="APP.renderPagos()">
+            <option value="">Todos</option>
+            <option value="pendiente">⏳ Pendiente</option>
+            <option value="aprobado">✅ Aprobado</option>
+            <option value="cancelado">💳 Cancelado</option>
+          </select>
+        </div>
+        <div>
+          <label>Proyecto</label>
+          <select id="pag-proy-filtro" onchange="APP.renderPagos()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="pagos-list"></div>
+  </div>
+
+  <!-- TAB PROYECTOS -->
+  <div id="tab-nom-proyectos" style="display:none">
+    <div class="card">
+      <div class="card-title"><span class="ct-ic">🏗️</span>Gasto por proyecto</div>
+      <div id="gasto-proyectos"></div>
+    </div>
+    <div id="gasto-detalle-list"></div>
+  </div>
+</div>
+
+<!-- MODAL COMPROBANTE PAGO -->
+<div class="mbk" id="m-comprobante">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="mhdr">
+    <span class="mtitle">💳 Comprobante de pago</span>
+    <button class="mclose" onclick="APP.cm('m-comprobante')">✕</button>
+  </div>
+  <div id="comprobante-body"></div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-O" onclick="APP.cm('m-comprobante')" style="flex:1">Cerrar</button>
+    <button class="btn btn-P" onclick="APP.imprimirComprobante()" style="flex:2">🖨️ Imprimir / PDF</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL PAGO INDIVIDUAL -->
+<div class="mbk" id="m-pago-ind">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="mhdr">
+    <span class="mtitle">💵 Registrar pago</span>
+    <button class="mclose" onclick="APP.cm('m-pago-ind')">✕</button>
+  </div>
+  <input type="hidden" id="pago-ind-idx"/>
+  <div id="pago-ind-info" style="background:var(--Pl);border-radius:var(--rs);padding:14px;margin-bottom:14px;font-size:13px;line-height:1.7"></div>
+  <label>Método de pago</label>
+  <select id="pago-metodo">
+    <option value="efectivo">💵 Efectivo</option>
+    <option value="transferencia">🏦 Transferencia bancaria</option>
+    <option value="cheque">📄 Cheque</option>
+  </select>
+  <label>Notas (opcional)</label>
+  <textarea id="pago-notas" style="min-height:60px" placeholder="Ej: Pago quincena junio..."></textarea>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-O" onclick="APP.cm('m-pago-ind')" style="flex:1">Cancelar</button>
+    <button class="btn btn-P" onclick="APP.confirmarPago()" style="flex:2" style="background:var(--S)">✅ Confirmar pago</button>
+  </div>
+</div>
+</div>
+
 </div><!-- end scroll-area -->
 
 <!-- BOTTOM NAV -->
@@ -735,6 +911,10 @@ function resp(d) {
   <button class="nav-item" id="nav-panel" onclick="APP.switchView('panel',this)">
     <div class="nav-icon">📊</div>
     <span>Panel</span>
+  </button>
+  <button class="nav-item" id="nav-nomina" onclick="APP.switchView('nomina',this)">
+    <div class="nav-icon">💰</div>
+    <span>Nómina</span>
   </button>
 </div>
 
@@ -809,7 +989,42 @@ var APP = (function() {
   }
 
   // === TIEMPO ===
-  function calcMins(t) { if(!t)return 0; var p=t.split(':').map(Number); return p[0]*60+p[1]; }
+  function calcMins(t) {
+    if(!t) return 0;
+    var s = parseTime(t) || String(t);
+    var p = s.split(':').map(Number);
+    if (p.length < 2 || isNaN(p[0]) || isNaN(p[1])) return 0;
+    return p[0]*60+p[1];
+  }
+  function parseTime(val) {
+    if (!val) return '';
+    var s = String(val);
+    // Google Sheets serializa horas como "1899-12-30T07:00:00.000Z"
+    if (s.indexOf('T') > -1) {
+      var p = s.split('T');
+      if (p[1]) return p[1].slice(0,5);
+    }
+    // Formato normal HH:MM
+    if (/^\d{1,2}:\d{2}/.test(s)) return s.slice(0,5);
+    // Numero decimal (fraccion del dia)
+    var n = parseFloat(s);
+    if (!isNaN(n) && n > 0 && n < 1) {
+      var tm = Math.round(n * 1440);
+      var h = Math.floor(tm/60), m = tm%60;
+      return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+    }
+    return s.length >= 5 ? s.slice(0,5) : s;
+  }
+
+  function parseHorasEf(val) {
+    if (!val && val !== 0) return 0;
+    var s = String(val);
+    // Si viene como fecha ISO (error de Sheets), calcular de otra forma
+    if (s.indexOf('T') > -1) return 0;
+    var n = parseFloat(s.replace(/[^0-9.]/g,''));
+    return isNaN(n) ? 0 : n;
+  }
+
   function calcHorasEf(e,s,ai,af) {
     var t=calcMins(s)-calcMins(e);
     if(ai&&af){ var a=calcMins(af)-calcMins(ai); if(a>0)t-=a; }
@@ -1077,7 +1292,7 @@ var APP = (function() {
           var fd='';
           if(typeof r[1]==='string')fd=r[1].slice(0,10);
           else if(typeof r[1]==='number'){var d=new Date((r[1]-25569)*86400*1000);fd=d.toISOString().split('T')[0];}
-          return {_rowIndex:i+1,_fecha:fd,fecha:fd,proyecto:r[2]||'',supervisor:r[3]||'',sector:r[4]||'',lat:r[5]||'',lng:r[6]||'',trabajador:r[7]||'',cargo:r[8]||'',entrada:r[9]||'',salida:r[10]||'',alm_ini:r[11]||'',alm_fin:r[12]||'',horas_efectivas:r[13]||0,observaciones:r[14]||'',tipo:r[15]||''};
+          return {_rowIndex:i+1,_fecha:fd,fecha:fd,proyecto:r[2]||'',supervisor:r[3]||'',sector:r[4]||'',lat:r[5]||'',lng:r[6]||'',trabajador:r[7]||'',cargo:r[8]||'',entrada:parseTime(r[9]),salida:parseTime(r[10]),alm_ini:parseTime(r[11]),alm_fin:parseTime(r[12]),horas_efectivas:parseHorasEf(r[13]),observaciones:r[14]||'',tipo:r[15]||''};
         });
         _renderPanel();
       })
@@ -1241,8 +1456,9 @@ var APP = (function() {
     document.getElementById('view-'+v).classList.add('active');
     if(btn)btn.classList.add('active');
     document.getElementById('scroll-area').scrollTop=0;
-    if(v==='panel')loadPanel();
-    if(v==='proy')renderProyFullList();
+    if(v==='panel')  loadPanel();
+    if(v==='proy')   renderProyFullList();
+    if(v==='nomina') initNomina();
   }
 
   function sTab(t,el) {
@@ -1299,6 +1515,441 @@ var APP = (function() {
     navigator.clipboard.writeText(txt).then(function(){alert('Código copiado');  });
   }
 
+
+  // ===== NÓMINA =====
+  var cargos = [];
+  var nominaData = [];
+  var pagosData = [];
+
+  var CARGOS_DEFAULT = [
+    {cargo:'Maestro Mayor', valorDia:35},
+    {cargo:'Albanil', valorDia:28},
+    {cargo:'Ayudante', valorDia:22},
+    {cargo:'Electricista', valorDia:32},
+    {cargo:'Soldador', valorDia:34},
+    {cargo:'Plomero', valorDia:30},
+    {cargo:'Pintor', valorDia:26},
+    {cargo:'Supervisor', valorDia:40},
+  ];
+
+  function initNomina() {
+    cargos  = JSON.parse(localStorage.getItem('satmec_cargos') || 'null') || CARGOS_DEFAULT.slice();
+    pagosData = JSON.parse(localStorage.getItem('satmec_pagos') || '[]');
+    renderCargos();
+    // Llenar select proyectos nómina
+    var sel = document.getElementById('nom-proy');
+    if (sel) {
+      sel.innerHTML = '<option value="">Todos los proyectos</option>';
+      proyectos.forEach(function(p) {
+        var o = document.createElement('option'); o.value = p.nombre; o.textContent = p.nombre; sel.appendChild(o);
+      });
+    }
+    // Llenar select filtro pagos proyectos
+    var sp = document.getElementById('pag-proy-filtro');
+    if (sp) {
+      sp.innerHTML = '<option value="">Todos</option>';
+      proyectos.forEach(function(p) {
+        var o = document.createElement('option'); o.value = p.nombre; o.textContent = p.nombre.split('-')[0].trim(); sp.appendChild(o);
+      });
+    }
+    // Fechas default: este mes
+    var hoy = new Date();
+    var primeroDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+    var ultimoDia  = hoy.toISOString().split('T')[0];
+    document.getElementById('nom-desde').value = primeroDia;
+    document.getElementById('nom-hasta').value  = ultimoDia;
+  }
+
+  function saveCargos() { localStorage.setItem('satmec_cargos', JSON.stringify(cargos)); }
+  function savePagos()  { localStorage.setItem('satmec_pagos',  JSON.stringify(pagosData)); }
+
+  function renderCargos() {
+    var c = document.getElementById('cargo-list');
+    if (!c) return;
+    if (!cargos.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">💵</div><p>Sin cargos. Agrega uno.</p></div>'; return; }
+    c.innerHTML = cargos.map(function(ca, i) {
+      return '<div class="cargo-item">'
+        + '<input class="cargo-name" type="text" value="' + ca.cargo + '" placeholder="Cargo" onchange="APP.updateCargo(' + i + ','cargo',this.value)"/>'
+        + '<input class="cargo-val" type="number" value="' + ca.valorDia + '" placeholder="$/día" min="0" step="0.5" onchange="APP.updateCargo(' + i + ','valorDia',parseFloat(this.value)||0)"/>'
+        + '<span style="font-size:11px;color:var(--g4);white-space:nowrap">$/día</span>'
+        + '<button class="btn-ic" onclick="APP.delCargo(' + i + ')">🗑️</button>'
+      + '</div>';
+    }).join('');
+  }
+
+  function updateCargo(i, key, val) { cargos[i][key] = val; saveCargos(); }
+  function addCargo() {
+    cargos.push({cargo: 'Nuevo cargo', valorDia: 0});
+    saveCargos(); renderCargos();
+  }
+  function delCargo(i) {
+    confirm2('¿Eliminar cargo "' + cargos[i].cargo + '"?', function() {
+      cargos.splice(i, 1); saveCargos(); renderCargos(); cm('m-confirm');
+    });
+  }
+
+  function getValorCargo(cargoNombre) {
+    var ca = cargos.find(function(c) { return c.cargo.toLowerCase().trim() === (cargoNombre||'').toLowerCase().trim(); });
+    return ca ? ca.valorDia : 0;
+  }
+
+  function calcularNomina() {
+    var desde = document.getElementById('nom-desde').value;
+    var hasta  = document.getElementById('nom-hasta').value;
+    var proy   = document.getElementById('nom-proy').value;
+    if (!desde || !hasta) { showAlertNom('err', 'Seleccione el rango de fechas'); return; }
+    if (desde > hasta)    { showAlertNom('err', 'La fecha "Desde" debe ser anterior a "Hasta"'); return; }
+
+    var btn = document.querySelector('#tab-nom-calcular .btn-P');
+    btn.textContent = 'Calculando...'; btn.disabled = true;
+
+    fetch(SHEET_URL + '?t=' + Date.now())
+      .then(function(r) { return r.json(); })
+      .then(function(raw) {
+        var rows = (Array.isArray(raw) ? raw : []).slice(1)
+          .filter(function(r) { return r[7]; })
+          .map(function(r) {
+            var fd = '';
+            if (typeof r[1] === 'string') fd = r[1].slice(0,10);
+            else if (typeof r[1] === 'number') { var d = new Date((r[1]-25569)*86400*1000); fd = d.toISOString().split('T')[0]; }
+            return { fecha: fd, proyecto: r[2]||'', supervisor: r[3]||'', trabajador: r[7]||'', cargo: r[8]||'', entrada: r[9]||'', salida: r[10]||'', alm_ini: r[11]||'', alm_fin: r[12]||'', horas_efectivas: parseFloat(r[13])||0 };
+          })
+          .filter(function(r) { return r.fecha >= desde && r.fecha <= hasta; })
+          .filter(function(r) { return !proy || r.proyecto === proy; });
+
+        // Agrupar por trabajador
+        var resumen = {};
+        rows.forEach(function(r) {
+          var key = r.trabajador + '|||' + r.cargo;
+          if (!resumen[key]) {
+            resumen[key] = {
+              trabajador: r.trabajador, cargo: r.cargo,
+              proyecto: r.proyecto,
+              dias: 0, horas_normales: 0, horas_extras: 0,
+              subtotal: 0, registros: []
+            };
+          }
+          var he = r.horas_efectivas;
+          var normales = Math.min(he, 8);
+          var extras   = Math.max(he - 8, 0);
+          resumen[key].dias++;
+          resumen[key].horas_normales += normales;
+          resumen[key].horas_extras   += extras;
+          resumen[key].registros.push(r);
+        });
+
+        // Calcular montos
+        nominaData = Object.values(resumen).map(function(t) {
+          var vDia    = getValorCargo(t.cargo);
+          var vHora   = vDia / 8;
+          var vHExtra = vHora * 1.25;
+          var montoNormal = t.horas_normales * vHora;
+          var montoExtra  = t.horas_extras  * vHExtra;
+          t.subtotal   = montoNormal + montoExtra;
+          t.valorDia   = vDia;
+          t.montoNormal = montoNormal;
+          t.montoExtra  = montoExtra;
+          t.desde = desde;
+          t.hasta = hasta;
+          // Verificar si ya fue pagado en este periodo
+          var pagado = pagosData.find(function(p) {
+            return p.trabajador === t.trabajador && p.desde === desde && p.hasta === hasta && p.estado === 'cancelado';
+          });
+          t.estado = pagado ? 'cancelado' : 'pendiente';
+          t.pagoId = pagado ? pagado.id : null;
+          return t;
+        });
+
+        renderNominaTabla();
+        btn.textContent = '🧮 Calcular nómina'; btn.disabled = false;
+      })
+      .catch(function() {
+        showAlertNom('err', 'Error al conectar con Google Sheets. Verifique internet.');
+        btn.textContent = '🧮 Calcular nómina'; btn.disabled = false;
+      });
+  }
+
+  function renderNominaTabla() {
+    var tbody = document.getElementById('nom-tbody');
+    document.getElementById('nom-resultado').style.display = 'block';
+    if (!nominaData.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="loading-text">Sin registros en el período seleccionado</td></tr>';
+      document.getElementById('nom-resumen-stats').innerHTML = '';
+      return;
+    }
+    var totalPagar = nominaData.reduce(function(s,t){ return s + t.subtotal; }, 0);
+    var pendientes = nominaData.filter(function(t){ return t.estado !== 'cancelado'; });
+    var totalPend  = pendientes.reduce(function(s,t){ return s + t.subtotal; }, 0);
+    document.getElementById('nom-resumen-stats').innerHTML =
+      '<div class="stat-card"><div class="stat-val" style="font-size:20px">$' + totalPagar.toFixed(2) + '</div><div class="stat-lbl">Total nómina</div></div>' +
+      '<div class="stat-card" style="border-top-color:var(--W)"><div class="stat-val" style="font-size:20px;color:var(--W)">$' + totalPend.toFixed(2) + '</div><div class="stat-lbl">Por pagar</div></div>' +
+      '<div class="stat-card" style="border-top-color:var(--S)"><div class="stat-val" style="color:var(--S)">' + nominaData.length + '</div><div class="stat-lbl">Trabajadores</div></div>' +
+      '<div class="stat-card" style="border-top-color:var(--A)"><div class="stat-val" style="color:var(--A)">' + (nominaData[0]?nominaData[0].dias:0) + '</div><div class="stat-lbl">Días aprox.</div></div>';
+
+    tbody.innerHTML = nominaData.map(function(t, i) {
+      var estBadge = t.estado === 'cancelado'
+        ? '<span class="estado-badge est-cancelado">✅ Pagado</span>'
+        : '<span class="estado-badge est-pendiente">⏳ Pendiente</span>';
+      var btnAcc = t.estado === 'cancelado'
+        ? '<button class="btn-ic" onclick="APP.verComprobante(' + i + ')" title="Ver comprobante">🧾</button>'
+        : '<button class="btn-ic" onclick="APP.abrirPagoInd(' + i + ')" title="Pagar" style="color:var(--S)">💳</button>';
+      return '<tr class="nom-row-' + t.estado + '">'
+        + '<td><strong style="font-size:13px">' + t.trabajador + '</strong></td>'
+        + '<td style="font-size:12px">' + t.cargo + '</td>'
+        + '<td style="text-align:center"><strong>' + t.dias + '</strong></td>'
+        + '<td style="text-align:center">' + t.horas_normales.toFixed(1) + 'h</td>'
+        + '<td style="text-align:center;color:var(--A)">' + t.horas_extras.toFixed(1) + 'h</td>'
+        + '<td><strong style="color:var(--P)">$' + t.subtotal.toFixed(2) + '</strong></td>'
+        + '<td>' + estBadge + '</td>'
+        + '<td>' + btnAcc + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function abrirPagoInd(i) {
+    var t = nominaData[i];
+    if (!t || t.estado === 'cancelado') return;
+    document.getElementById('pago-ind-idx').value = i;
+    document.getElementById('pago-ind-info').innerHTML =
+      '<div style="font-weight:700;font-size:15px;color:var(--P);margin-bottom:8px">' + t.trabajador + '</div>'
+      + '<div style="color:var(--g5)">Cargo: <strong>' + t.cargo + '</strong></div>'
+      + '<div style="color:var(--g5)">Período: <strong>' + t.desde + ' al ' + t.hasta + '</strong></div>'
+      + '<div style="color:var(--g5)">Días trabajados: <strong>' + t.dias + '</strong></div>'
+      + '<div style="color:var(--g5)">Horas normales: <strong>' + t.horas_normales.toFixed(1) + 'h × $' + (t.valorDia/8).toFixed(2) + ' = $' + t.montoNormal.toFixed(2) + '</strong></div>'
+      + (t.horas_extras > 0 ? '<div style="color:var(--A)">Horas extras: <strong>' + t.horas_extras.toFixed(1) + 'h × $' + (t.valorDia/8*1.25).toFixed(2) + ' = $' + t.montoExtra.toFixed(2) + '</strong></div>' : '')
+      + '<div style="font-size:18px;font-weight:800;color:var(--S);margin-top:10px;padding-top:10px;border-top:2px solid var(--g2)">TOTAL A PAGAR: $' + t.subtotal.toFixed(2) + '</div>';
+    document.getElementById('pago-notas').value = '';
+    om('m-pago-ind');
+  }
+
+  function confirmarPago() {
+    var i = parseInt(document.getElementById('pago-ind-idx').value);
+    var t = nominaData[i]; if (!t) return;
+    var metodo  = document.getElementById('pago-metodo').value;
+    var notas   = document.getElementById('pago-notas').value;
+    var pago = {
+      id: 'PAG-' + Date.now(),
+      trabajador: t.trabajador, cargo: t.cargo,
+      proyecto: t.proyecto, desde: t.desde, hasta: t.hasta,
+      dias: t.dias, horas_normales: t.horas_normales, horas_extras: t.horas_extras,
+      monto: t.subtotal, metodo: metodo, notas: notas,
+      fecha_pago: new Date().toISOString().split('T')[0],
+      hora_pago: new Date().toLocaleTimeString(),
+      estado: 'cancelado'
+    };
+    pagosData.push(pago);
+    savePagos();
+    nominaData[i].estado   = 'cancelado';
+    nominaData[i].pagoId   = pago.id;
+    renderNominaTabla();
+    cm('m-pago-ind');
+    showAlertNom('ok', '✅ Pago registrado — ' + t.trabajador + ' $' + t.subtotal.toFixed(2));
+    // Mostrar comprobante automáticamente
+    setTimeout(function() { mostrarComprobante(pago); }, 400);
+  }
+
+  function verComprobante(i) {
+    var t = nominaData[i];
+    var pago = pagosData.find(function(p) { return p.id === t.pagoId; });
+    if (pago) mostrarComprobante(pago);
+  }
+
+  function mostrarComprobante(pago) {
+    var body = document.getElementById('comprobante-body');
+    body.innerHTML =
+      '<div class="comprobante">'
+      + '<div class="comprobante-hdr">'
+      + '<img src="data:image/png;base64,' + `{L}` + '" style="height:48px;margin-bottom:8px"/>'
+      + '<div class="comprobante-logo">SATMEC</div>'
+      + '<div class="comprobante-sub">Proyectos Industriales</div>'
+      + '<div class="comprobante-num">' + pago.id + '</div>'
+      + '</div>'
+      + '<div class="comp-row"><span>Trabajador</span><strong>' + pago.trabajador + '</strong></div>'
+      + '<div class="comp-row"><span>Cargo</span><strong>' + pago.cargo + '</strong></div>'
+      + '<div class="comp-row"><span>Proyecto</span><strong>' + (pago.proyecto||'Varios') + '</strong></div>'
+      + '<div class="comp-row"><span>Período</span><strong>' + pago.desde + ' al ' + pago.hasta + '</strong></div>'
+      + '<div class="comp-row"><span>Días trabajados</span><strong>' + pago.dias + '</strong></div>'
+      + '<div class="comp-row"><span>Horas normales</span><strong>' + pago.horas_normales.toFixed(1) + 'h</strong></div>'
+      + (pago.horas_extras > 0 ? '<div class="comp-row"><span>Horas extras (125%)</span><strong>' + pago.horas_extras.toFixed(1) + 'h</strong></div>' : '')
+      + '<div class="comp-row"><span>Método de pago</span><strong>' + pago.metodo.charAt(0).toUpperCase() + pago.metodo.slice(1) + '</strong></div>'
+      + '<div class="comp-row"><span>Fecha de pago</span><strong>' + pago.fecha_pago + ' ' + pago.hora_pago + '</strong></div>'
+      + (pago.notas ? '<div class="comp-row"><span>Notas</span><strong>' + pago.notas + '</strong></div>' : '')
+      + '<div class="comp-total">'
+      + '<div class="comp-total-val">$' + pago.monto.toFixed(2) + '</div>'
+      + '<div class="comp-total-lbl">TOTAL PAGADO</div>'
+      + '<div class="comp-estado" style="background:var(--Sb);color:var(--S)">✅ CANCELADO</div>'
+      + '</div></div>';
+    om('m-comprobante');
+  }
+
+  function imprimirComprobante() {
+    var contenido = document.getElementById('comprobante-body').innerHTML;
+    var ventana = window.open('', '_blank');
+    ventana.document.write('<html><head><title>Comprobante SATMEC</title>'
+      + '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">'
+      + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;padding:20px;max-width:400px;margin:0 auto}'
+      + '.comprobante-hdr{background:linear-gradient(135deg,#0a1f44,#0d2b5e);color:#fff;padding:20px;border-radius:12px;margin-bottom:16px;text-align:center}'
+      + '.comprobante-logo{font-size:22px;font-weight:800;letter-spacing:1px}'
+      + '.comprobante-sub{font-size:11px;opacity:.7;margin-top:4px;text-transform:uppercase;letter-spacing:.8px}'
+      + '.comprobante-num{background:#e88f00;color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;margin-top:8px;display:inline-block}'
+      + '.comp-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eaedf2;font-size:13px}'
+      + '.comp-total{background:#e8edf6;border-radius:10px;padding:14px;margin-top:12px;text-align:center}'
+      + '.comp-total-val{font-size:28px;font-weight:800;color:#0d2b5e}'
+      + '.comp-total-lbl{font-size:12px;color:#8c94a6;margin-top:2px}'
+      + '.comp-estado{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;margin-top:10px;background:#eaf4ee;color:#1a7a3a}'
+      + '</style></head><body>' + contenido + '</body></html>');
+    ventana.document.close();
+    ventana.focus();
+    setTimeout(function() { ventana.print(); }, 500);
+  }
+
+  function pagarTodos() {
+    var pendientes = nominaData.filter(function(t) { return t.estado !== 'cancelado'; });
+    if (!pendientes.length) { showAlertNom('err', 'No hay pagos pendientes'); return; }
+    confirm2('¿Registrar pago para ' + pendientes.length + ' trabajadores? Total: $' + pendientes.reduce(function(s,t){return s+t.subtotal;},0).toFixed(2), function() {
+      var metodo = 'efectivo';
+      pendientes.forEach(function(t) {
+        var idx = nominaData.indexOf(t);
+        var pago = {
+          id: 'PAG-' + Date.now() + '-' + idx,
+          trabajador: t.trabajador, cargo: t.cargo,
+          proyecto: t.proyecto, desde: t.desde, hasta: t.hasta,
+          dias: t.dias, horas_normales: t.horas_normales, horas_extras: t.horas_extras,
+          monto: t.subtotal, metodo: metodo, notas: 'Pago grupal',
+          fecha_pago: new Date().toISOString().split('T')[0],
+          hora_pago: new Date().toLocaleTimeString(),
+          estado: 'cancelado'
+        };
+        pagosData.push(pago);
+        nominaData[idx].estado = 'cancelado';
+        nominaData[idx].pagoId = pago.id;
+      });
+      savePagos(); renderNominaTabla(); cm('m-confirm');
+      showAlertNom('ok', '✅ ' + pendientes.length + ' pagos registrados correctamente');
+    });
+  }
+
+  function renderPagos() {
+    var c = document.getElementById('pagos-list');
+    var estFiltro  = (document.getElementById('pag-estado-filtro') || {}).value || '';
+    var proyFiltro = (document.getElementById('pag-proy-filtro')   || {}).value || '';
+    var filtered = pagosData.filter(function(p) {
+      var pass = true;
+      if (estFiltro)  pass = p.estado  === estFiltro;
+      if (proyFiltro) pass = pass && p.proyecto === proyFiltro;
+      return pass;
+    }).slice().reverse();
+    if (!filtered.length) {
+      c.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><p>Sin pagos registrados.</p></div>';
+      return;
+    }
+    c.innerHTML = filtered.map(function(p) {
+      var colBorder = p.estado === 'cancelado' ? 'var(--S)' : p.estado === 'aprobado' ? 'var(--P)' : '#e8c060';
+      var estBadge  = p.estado === 'cancelado'
+        ? '<span class="estado-badge est-cancelado">✅ Cancelado</span>'
+        : '<span class="estado-badge est-pendiente">⏳ Pendiente</span>';
+      return '<div class="pago-card ' + p.estado + '">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+        + '<div><div style="font-size:15px;font-weight:800;color:var(--P)">' + p.trabajador + '</div>'
+        + '<div style="font-size:12px;color:var(--g4)">' + p.cargo + ' · ' + p.fecha_pago + '</div></div>'
+        + '<div style="text-align:right"><div style="font-size:18px;font-weight:800;color:var(--S)">$' + p.monto.toFixed(2) + '</div>' + estBadge + '</div>'
+        + '</div>'
+        + '<div style="font-size:12px;color:var(--g5);margin-bottom:8px">'
+        + '📅 ' + p.desde + ' → ' + p.hasta + ' · ' + p.dias + ' días · '
+        + p.horas_normales.toFixed(1) + 'h norm. + ' + (p.horas_extras||0).toFixed(1) + 'h extra'
+        + (p.proyecto ? '<br>🏗️ ' + p.proyecto.split('-')[0] : '')
+        + '</div>'
+        + '<div style="display:flex;justify-content:space-between;align-items:center">'
+        + '<span style="font-size:11px;color:var(--g4)">' + p.id + '</span>'
+        + '<button class="btn btn-O btn-sm" style="font-size:11px;padding:6px 14px" onclick="APP.mostrarComprobantePorId('' + p.id + '')">🧾 Comprobante</button>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  function mostrarComprobantePorId(id) {
+    var pago = pagosData.find(function(p) { return p.id === id; });
+    if (pago) mostrarComprobante(pago);
+  }
+
+  function renderGastoProyectos() {
+    var gastos = {};
+    pagosData.filter(function(p) { return p.estado === 'cancelado'; }).forEach(function(p) {
+      var proy = p.proyecto || 'Sin proyecto';
+      if (!gastos[proy]) gastos[proy] = { total: 0, pagos: 0, trabajadores: new Set() };
+      gastos[proy].total += p.monto;
+      gastos[proy].pagos++;
+      gastos[proy].trabajadores.add(p.trabajador);
+    });
+    var max = Math.max.apply(null, Object.values(gastos).map(function(g){ return g.total; }).concat([1]));
+    var c = document.getElementById('gasto-proyectos');
+    if (!Object.keys(gastos).length) {
+      c.innerHTML = '<div class="empty"><div class="empty-icon">🏗️</div><p>Sin gastos registrados aún.</p></div>';
+      document.getElementById('gasto-detalle-list').innerHTML = '';
+      return;
+    }
+    c.innerHTML = Object.keys(gastos).map(function(proy) {
+      var g = gastos[proy];
+      var pd = proyectos.find(function(x) { return x.nombre === proy; });
+      var col = pd ? pd.color : 'var(--P)';
+      return '<div style="margin-bottom:14px">'
+        + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">'
+        + '<span style="font-weight:600;color:var(--g5);max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + proy.split('-')[0].trim() + '</span>'
+        + '<strong style="color:var(--P)">$' + g.total.toFixed(2) + '</strong></div>'
+        + '<div class="progress-bar"><div class="gasto-bar" style="width:' + (g.total/max*100).toFixed(0) + '%;background:' + col + '"></div></div>'
+        + '<div style="font-size:11px;color:var(--g4);margin-top:4px">' + g.pagos + ' pagos · ' + g.trabajadores.size + ' trabajadores</div>'
+        + '</div>';
+    }).join('');
+    // Detalle por proyecto
+    var det = document.getElementById('gasto-detalle-list');
+    det.innerHTML = Object.keys(gastos).map(function(proy) {
+      var pd = proyectos.find(function(x) { return x.nombre === proy; });
+      var col = pd ? pd.color : 'var(--P)';
+      var proypagos = pagosData.filter(function(p) { return p.proyecto === proy && p.estado === 'cancelado'; });
+      return '<div class="card" style="border-left:4px solid ' + col + '">'
+        + '<div class="card-title"><span class="ct-ic">🏗️</span>' + proy.split('-')[0].trim() + '</div>'
+        + proypagos.map(function(p) {
+            return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--g1);font-size:13px">'
+              + '<div><div style="font-weight:600">' + p.trabajador + '</div><div style="font-size:11px;color:var(--g4)">' + p.fecha_pago + ' · ' + p.dias + ' días</div></div>'
+              + '<strong style="color:var(--S)">$' + p.monto.toFixed(2) + '</strong></div>';
+          }).join('')
+        + '<div style="text-align:right;padding-top:10px;font-size:14px;font-weight:800;color:var(--P)">Total: $' + gastos[proy].total.toFixed(2) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function exportNominaCSV() {
+    if (!nominaData.length) { alert('Calcule la nómina primero'); return; }
+    var h = ['Trabajador','Cargo','Proyecto','Dias','H.Normales','H.Extras','Monto.Normal','Monto.Extra','Total','Estado'];
+    var csv = [h.join(',')].concat(nominaData.map(function(t) {
+      return [t.trabajador,t.cargo,t.proyecto,t.dias,t.horas_normales.toFixed(1),t.horas_extras.toFixed(1),t.montoNormal.toFixed(2),t.montoExtra.toFixed(2),t.subtotal.toFixed(2),t.estado].join(',');
+    })).join('\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+    a.download = 'nomina_satmec_' + new Date().toISOString().split('T')[0] + '.csv';
+    a.click();
+  }
+
+  function sTabNom(t, el) {
+    ['calcular','pagos','proyectos'].forEach(function(id) {
+      document.getElementById('tab-nom-' + id).style.display = id === t ? 'block' : 'none';
+    });
+    document.querySelectorAll('#view-nomina .ptab').forEach(function(tab) { tab.classList.remove('active'); });
+    if (el) el.classList.add('active');
+    if (t === 'pagos')     renderPagos();
+    if (t === 'proyectos') renderGastoProyectos();
+  }
+
+  function showAlertNom(type, msg) {
+    var ok  = document.getElementById('alert-nom-ok');
+    var err = document.getElementById('alert-nom-err');
+    if (!ok || !err) return;
+    ok.classList.remove('visible'); err.classList.remove('visible');
+    var el = type === 'ok' ? ok : err;
+    el.innerHTML = (type === 'ok' ? '✅ ' : '❌ ') + msg;
+    el.classList.add('visible');
+    setTimeout(function() { el.classList.remove('visible'); }, 5000);
+  }
+
   return {
     init:init, switchView:switchView, sTab:sTab,
     om:om, cm:cm, smt:smt, smt2:smt2, smt3:smt3,
@@ -1311,6 +1962,16 @@ var APP = (function() {
     addPersonal:addPersonal, delPersonal:delPersonal,
     addSupervisor:addSupervisor, delSupervisor:delSupervisor,
     copyScript:copyScript,
+    // Nómina
+    calcularNomina:calcularNomina, renderCargos:renderCargos,
+    updateCargo:updateCargo, addCargo:addCargo, delCargo:delCargo,
+    abrirPagoInd:abrirPagoInd, confirmarPago:confirmarPago,
+    verComprobante:verComprobante, mostrarComprobante:mostrarComprobante,
+    mostrarComprobantePorId:mostrarComprobantePorId,
+    imprimirComprobante:imprimirComprobante,
+    pagarTodos:pagarTodos, renderPagos:renderPagos,
+    renderGastoProyectos:renderGastoProyectos,
+    exportNominaCSV:exportNominaCSV, sTabNom:sTabNom,
   };
 })();
 
