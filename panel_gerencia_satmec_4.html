@@ -121,6 +121,9 @@ tr:hover td{background:var(--Pl)}
 .hint{font-size:12px;color:var(--g4);margin-top:6px;line-height:1.5}
 .arow{display:flex;gap:8px;margin-top:10px}
 .arow .btn{flex:1}
+.comp-banco-section{margin-top:16px;padding:14px;background:var(--Pl);border-radius:var(--rs);text-align:center}
+.comp-banco-section img{max-width:100%;border-radius:var(--rsm);box-shadow:var(--sh);margin-top:8px}
+.comp-banco-title{font-size:12px;font-weight:700;color:var(--P);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
 .pitem{display:flex;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--g1)}
 .pitem:last-child{border-bottom:none}
 .pitem-info{flex:1;min-width:0}
@@ -142,14 +145,29 @@ tr:hover td{background:var(--Pl)}
   <div class="mhdr"><span class="mtitle">Registrar pago</span><button class="mclose" onclick="cm('m-pago')">x</button></div>
   <input type="hidden" id="pago-idx">
   <div id="pago-info" style="background:var(--Pl);border-radius:var(--rs);padding:14px;margin-bottom:14px;font-size:13px;line-height:1.9"></div>
+  <label>Bono adicional (opcional)</label>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span style="font-size:15px;font-weight:700;color:var(--g4)">$</span>
+    <input type="number" id="pago-bono" value="0" min="0" step="0.50" style="text-align:center;flex:1" placeholder="0.00">
+  </div>
+  <p class="hint">Si aplica bono de rendimiento, transporte, alimentacion, etc.</p>
   <label>Metodo de pago</label>
-  <select id="pago-metodo">
+  <select id="pago-metodo" onchange="toggleCompBanco()">
     <option value="Efectivo">Efectivo</option>
     <option value="Transferencia">Transferencia bancaria</option>
     <option value="Cheque">Cheque</option>
   </select>
+  <div id="comp-banco-box" style="display:none;margin-top:12px;padding:14px;background:var(--Pl);border-radius:var(--rs);border:2px dashed var(--P)">
+    <label style="margin-top:0;color:var(--P);font-weight:700">Adjuntar comprobante de transferencia</label>
+    <p class="hint" style="margin-bottom:10px">Suba foto o captura del comprobante del banco</p>
+    <input type="file" id="comp-banco-file" accept="image/*" capture="environment" style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
+    <div id="comp-banco-preview" style="display:none;margin-top:10px;text-align:center">
+      <img id="comp-banco-img" style="max-width:100%;max-height:300px;border-radius:var(--rsm);box-shadow:var(--sh)">
+      <button class="btn bo bsm" style="margin-top:8px;font-size:11px" onclick="quitarCompBanco()">Quitar imagen</button>
+    </div>
+  </div>
   <label>Notas</label>
-  <textarea id="pago-notas" style="min-height:60px" placeholder="Ej: Pago quincena junio..."></textarea>
+  <textarea id="pago-notas" style="min-height:60px" placeholder="Ej: Pago quincena junio, bono por rendimiento..."></textarea>
   <div style="display:flex;gap:8px;margin-top:16px">
     <button class="btn bo" onclick="cm('m-pago')" style="flex:1">Cancelar</button>
     <button class="btn bs" onclick="confirmarPago()" style="flex:2">Confirmar pago</button>
@@ -165,7 +183,8 @@ tr:hover td{background:var(--Pl)}
   <div id="comp-body"></div>
   <div style="display:flex;gap:8px;margin-top:16px">
     <button class="btn bo" onclick="cm('m-comp')" style="flex:1">Cerrar</button>
-    <button class="btn bp" onclick="imprimirComp()" style="flex:2">Imprimir / PDF</button>
+    <button class="btn bp" onclick="imprimirComp()" style="flex:1">Imprimir / PDF</button>
+    <button class="btn" style="flex:1;background:#0078d4;color:#fff" onclick="guardarOneDrive()">OneDrive</button>
   </div>
 </div>
 </div>
@@ -913,7 +932,8 @@ function abrirPago(i) {
     + '<tr><td style="padding:4px 0">Horas normales</td><td style="text-align:right;font-weight:700;color:var(--g6)">' + t.hn.toFixed(1) + 'h = $' + t.montoNormal.toFixed(2) + '</td></tr>'
     + (t.he>0 ? '<tr><td style="padding:4px 0;color:var(--A)">Horas extras (+' + t.recargo + '%)</td><td style="text-align:right;font-weight:700;color:var(--A)">' + t.he.toFixed(1) + 'h = $' + t.montoExtra.toFixed(2) + '</td></tr>' : '')
     + '</table>'
-    + '<div style="font-size:20px;font-weight:800;color:var(--S);text-align:center;margin-top:12px;padding-top:12px;border-top:2px solid var(--g2)">TOTAL: $' + t.subtotal.toFixed(2) + '</div>';
+    + '<div style="font-size:20px;font-weight:800;color:var(--S);text-align:center;margin-top:12px;padding-top:12px;border-top:2px solid var(--g2)">SUBTOTAL: $' + t.subtotal.toFixed(2) + '</div>'
+    + '<div style="font-size:11px;color:var(--g4);text-align:center;margin-top:4px">+ Bono (si aplica) se suma al confirmar</div>';
   document.getElementById('pago-notas').value = '';
   om('m-pago');
 }
@@ -921,17 +941,26 @@ function abrirPago(i) {
 function confirmarPago() {
   var i = parseInt(document.getElementById('pago-idx').value);
   var t = nomData[i]; if (!t) return;
+  var bono = parseFloat(document.getElementById('pago-bono').value) || 0;
+  var totalConBono = t.subtotal + bono;
+  var compBanco = compBancoBase64 || '';
   var pago = {
     id:'PAG-'+Date.now(), trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
     desde:t.desde, hasta:t.hasta, dias:t.dias,
     hn:t.hn, he:t.he, recargo:t.recargo, montoNormal:t.montoNormal, montoExtra:t.montoExtra,
-    monto:t.subtotal, valorDia:t.valorDia,
+    bono:bono, monto:totalConBono, valorDia:t.valorDia,
     metodo:document.getElementById('pago-metodo').value,
     notas:document.getElementById('pago-notas').value,
+    compBanco:compBanco,
     fecha_pago:new Date().toISOString().split('T')[0],
     hora_pago:new Date().toLocaleTimeString(),
     estado:'cancelado'
   };
+  // Limpiar comprobante bancario para el siguiente pago
+  compBancoBase64 = '';
+  document.getElementById('comp-banco-file').value = '';
+  document.getElementById('comp-banco-preview').style.display = 'none';
+  document.getElementById('comp-banco-box').style.display = 'none';
   pagosData.push(pago);
   localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
   guardarPagoSheets(pago);
@@ -998,12 +1027,108 @@ function mostrarComp(pago) {
     +'<div class="comp-row"><span>Metodo de pago</span><strong>' + esc(pago.metodo) + '</strong></div>'
     +'<div class="comp-row"><span>Fecha de pago</span><strong>' + pago.fecha_pago + ' ' + pago.hora_pago + '</strong></div>'
     +(pago.notas?'<div class="comp-row"><span>Notas</span><strong>'+esc(pago.notas)+'</strong></div>':'')
+    +(pago.bono > 0 ? '<div class="comp-row"><span>Bono adicional</span><strong style="color:var(--S)">+ $' + pago.bono.toFixed(2) + '</strong></div>' : '')
     +'<div class="comp-total">'
     +'<div class="comp-total-val">$' + pago.monto.toFixed(2) + '</div>'
-    +'<div class="comp-total-lbl">TOTAL PAGADO</div>'
+    +'<div class="comp-total-lbl">TOTAL PAGADO' + (pago.bono > 0 ? ' (incluye bono)' : '') + '</div>'
     +'<div class="comp-est">CANCELADO</div>'
-    +'</div>';
+    +'</div>'
+    +(pago.compBanco ? '<div class="comp-banco-section"><div class="comp-banco-title">Comprobante de transferencia</div><img src="' + pago.compBanco + '"></div>' : '');
   om('m-comp');
+}
+
+var compBancoBase64 = '';
+
+function toggleCompBanco() {
+  var metodo = document.getElementById('pago-metodo').value;
+  var box = document.getElementById('comp-banco-box');
+  box.style.display = (metodo === 'Transferencia') ? 'block' : 'none';
+  if (metodo !== 'Transferencia') {
+    compBancoBase64 = '';
+    document.getElementById('comp-banco-preview').style.display = 'none';
+  }
+}
+
+function quitarCompBanco() {
+  compBancoBase64 = '';
+  document.getElementById('comp-banco-file').value = '';
+  document.getElementById('comp-banco-preview').style.display = 'none';
+}
+
+// Leer y comprimir imagen del comprobante bancario
+document.addEventListener('DOMContentLoaded', function() {
+  var fileInput = document.getElementById('comp-banco-file');
+  if (fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var img = new Image();
+        img.onload = function() {
+          // Comprimir a max 800px de ancho para no saturar localStorage
+          var canvas = document.createElement('canvas');
+          var maxW = 800;
+          var w = img.width, h = img.height;
+          if (w > maxW) { h = h * maxW / w; w = maxW; }
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          compBancoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          // Mostrar preview
+          document.getElementById('comp-banco-img').src = compBancoBase64;
+          document.getElementById('comp-banco-preview').style.display = 'block';
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+});
+
+function guardarOneDrive() {
+  // Generar nombre del archivo: PAGO_Trabajador_Fecha_ID.html
+  var comp = document.getElementById('comp-body');
+  if (!comp) return;
+  var contenido = comp.innerHTML;
+  // Extraer datos del comprobante para el nombre
+  var rows = comp.querySelectorAll('.comp-row strong');
+  var trabajador = rows[0] ? rows[0].textContent.replace(/[^a-zA-Z0-9 ]/g,'').trim().replace(/ /g,'_') : 'pago';
+  var fecha = rows.length > 5 ? rows[5].textContent.split(' ')[0] : new Date().toISOString().split('T')[0];
+  var numPago = comp.querySelector('.comp-num') ? comp.querySelector('.comp-num').textContent : 'PAG';
+  var nombreArchivo = 'PAGO_' + trabajador + '_' + fecha + '_' + numPago + '.html';
+
+  // Crear archivo HTML del comprobante
+  var htmlComp = '<!DOCTYPE html><html><head><title>Comprobante ' + numPago + '</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">'
+    + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:DM Sans,sans-serif;padding:24px;max-width:420px;margin:0 auto;color:#1a1d2e}'
+    + '.comp-hdr{background:linear-gradient(135deg,#060f28,#0d2b5e);color:#fff;padding:22px;border-radius:14px;margin-bottom:16px;text-align:center}'
+    + '.comp-logo{font-size:24px;font-weight:800;letter-spacing:1px;margin-top:8px}'
+    + '.comp-sub{font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:.8px;margin-top:3px}'
+    + '.comp-num{background:#e88f00;color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-top:10px;display:inline-block}'
+    + '.comp-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eaedf2;font-size:13px}'
+    + '.comp-row strong{color:#0d2b5e;text-align:right;max-width:55%}'
+    + '.comp-total{background:#e8edf6;border-radius:12px;padding:18px;margin-top:14px;text-align:center}'
+    + '.comp-total-val{font-size:34px;font-weight:800;color:#0d2b5e}'
+    + '.comp-total-lbl{font-size:12px;color:#8c94a6;margin-top:3px;text-transform:uppercase;letter-spacing:.6px}'
+    + '.comp-est{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;margin-top:12px;background:#eaf4ee;color:#1a7a3a}'
+    + '.comp-banco-section{margin-top:16px;padding:14px;background:#e8edf6;border-radius:12px;text-align:center}'
+    + '.comp-banco-section img{max-width:100%;border-radius:8px;margin-top:8px}'
+    + '.comp-banco-title{font-size:12px;font-weight:700;color:#0d2b5e;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}'
+    + '</style></head><body>' + contenido + '</body></html>';
+
+  // Descargar el archivo con nombre especifico
+  var blob = new Blob([htmlComp], {type: 'text/html;charset=utf-8;'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombreArchivo;
+  a.click();
+
+  // Abrir OneDrive para que suba el archivo a la carpeta
+  setTimeout(function() {
+    window.open('https://onedrive.live.com', '_blank');
+    showAlert('ok', 'Archivo descargado: ' + nombreArchivo + '. Subalo a su carpeta en OneDrive.', 'nom');
+  }, 1000);
 }
 
 function imprimirComp() {
@@ -1051,8 +1176,10 @@ function renderPagos() {
       +'<div style="font-size:12px;color:var(--g5);margin-bottom:10px;line-height:1.7">'
       +'Periodo: ' + p.desde + ' a ' + p.hasta + ' - ' + p.dias + ' dias'
       +(p.he>0?' (extra +'+(p.recargo||50)+'%)':'')
+      +(p.bono>0?' | Bono: $'+p.bono.toFixed(2):'')
       +(p.proyecto ? '<br>Proyecto: ' + esc(p.proyecto) : '')
       +(p.notas    ? '<br>Notas: '    + esc(p.notas)    : '')
+      +(p.compBanco ? '<br><span style="color:var(--S);font-weight:700">Comprobante de transferencia adjunto</span>' : '')
       +'</div>'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:10px;color:var(--g4)">' + p.id + '</span>'
@@ -1123,9 +1250,9 @@ function renderProyectos() {
 
 function exportNomCSV() {
   if (!nomData.length) { alert('Calcule la nomina primero'); return; }
-  var h = ['Trabajador','Cargo','Proyecto','Dias','H.Normales','H.Extras','Recargo','Valor.Dia','Monto.Normal','Monto.Extra','Total','Estado'];
+  var h = ['Trabajador','Cargo','Proyecto','Dias','H.Normales','H.Extras','Recargo','Valor.Dia','Monto.Normal','Monto.Extra','Bono','Total','Estado'];
   var csv = [h.join(',')].concat(nomData.map(function(t) {
-    return [t.trabajador,t.cargo,t.proyecto,t.dias,t.hn.toFixed(1),t.he.toFixed(1),(t.he>0?'+'+t.recargo+'%':'-'),t.valorDia.toFixed(2),t.montoNormal.toFixed(2),t.montoExtra.toFixed(2),t.subtotal.toFixed(2),t.estado].join(',');
+    return [t.trabajador,t.cargo,t.proyecto,t.dias,t.hn.toFixed(1),t.he.toFixed(1),(t.he>0?'+'+t.recargo+'%':'-'),t.valorDia.toFixed(2),t.montoNormal.toFixed(2),t.montoExtra.toFixed(2),(t.bono||0).toFixed(2),t.subtotal.toFixed(2),t.estado].join(',');
   })).join('\n');
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
