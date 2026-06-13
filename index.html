@@ -458,6 +458,11 @@ var APP = (function() {
       if (this.value !== '') {
         var p = proyectos[parseInt(this.value)];
         if (p) updateBadge('proy-badge', 'proy-badge-txt', p.nombre, p.color, p.color + '18');
+        // Aplicar el proyecto a todos los selectores vacios de trabajadores
+        var val = this.value;
+        document.querySelectorAll('.prow select').forEach(function(sel) {
+          if (sel.value === '') sel.value = val;
+        });
       } else {
         document.getElementById('proy-badge').style.display = 'none';
       }
@@ -613,8 +618,10 @@ var APP = (function() {
   }
 
   function buildProyRow(wi, pi) {
+    var proyGeneral = (document.getElementById('sel-proy') || {}).value || '';
     var opts = proyectos.map(function(p, idx) {
-      return '<option value="' + idx + '">' + p.nombre + '</option>';
+      var selAttr = (String(idx) === proyGeneral && pi === 0) ? ' selected' : '';
+      return '<option value="' + idx + '"' + selAttr + '>' + p.nombre + '</option>';
     }).join('');
     var delBtn = pi > 0
       ? '<button class="prow-del" data-wi="' + wi + '" data-pi="' + pi + '">Quitar</button>'
@@ -883,8 +890,10 @@ var APP = (function() {
         var psel  = document.getElementById('psel-' + i + '-' + pi);
         var pe    = document.getElementById('pe-'   + i + '-' + pi);
         var ps    = document.getElementById('ps-'   + i + '-' + pi);
-        if (!psel || psel.value === '') return;
-        var proj  = proyectos[parseInt(psel.value)];
+        // Si el trabajador no tiene proyecto propio, usar el proyecto general del dia
+        var pVal = (psel && psel.value !== '') ? psel.value : document.getElementById('sel-proy').value;
+        if (pVal === '') return;
+        var proj  = proyectos[parseInt(pVal)];
         if (!proj) return;
         var e = pe ? pe.value : '07:00';
         var s = ps ? ps.value : '16:00';
@@ -918,7 +927,15 @@ var APP = (function() {
       });
     });
 
-    if (!regs.length) { showAlert('err', 'No hay trabajadores presentes con proyecto asignado'); return; }
+    if (!regs.length) {
+      var proyGeneral = document.getElementById('sel-proy').value;
+      if (proyGeneral === '') {
+        showAlert('err', 'Seleccione el proyecto del dia (arriba) o asigne proyecto a cada trabajador');
+      } else {
+        showAlert('err', 'No hay trabajadores marcados como presentes');
+      }
+      return;
+    }
 
     var btn = document.querySelector('.btn-send');
     btn.textContent = 'Enviando...'; btn.disabled = true;
