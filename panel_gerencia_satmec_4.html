@@ -801,7 +801,7 @@ function renderPersonalPeriodo() {
   var rows = '';
   personalPeriodo.forEach(function(t, i) {
     var totalH = (t.hn + t.he).toFixed(1);
-    if (!t.recargo) t.recargo = 50; // default 50% (Ley Ecuador - horas suplementarias diurnas)
+    if (t.recargo === undefined || t.recargo === null) t.recargo = 50; // default 50% (Ley Ecuador)
     var hasExtra = t.he > 0;
     rows += '<div class="pitem-wrap" data-idx="' + i + '" style="border-bottom:1px solid var(--g1);padding:12px 0">'
       + '<div class="pitem" style="border:none;padding:0">'
@@ -849,7 +849,7 @@ function calcularNomina() {
   if (!personalPeriodo.length) { showAlert('err','Primero busque el personal del periodo','nom'); return; }
   nomData = personalPeriodo.map(function(t) {
     var vd = t.valorDia || 0, vh = vd/8;
-    var recargo = t.recargo || 50; // 50% o 100% segun Ley Ecuador
+    var recargo = (t.recargo === undefined || t.recargo === null) ? 50 : t.recargo;
     var factorExtra = 1 + (recargo/100);
     var item = {
       trabajador: t.trabajador, cargo: t.cargo, proyecto: t.proyecto,
@@ -930,7 +930,7 @@ function abrirPago(i) {
     + '<tr><td style="padding:4px 0">Dias trabajados</td><td style="text-align:right;font-weight:700;color:var(--g6)">' + t.dias + '</td></tr>'
     + '<tr><td style="padding:4px 0">Valor diario</td><td style="text-align:right;font-weight:700;color:var(--g6)">$' + t.valorDia.toFixed(2) + '</td></tr>'
     + '<tr><td style="padding:4px 0">Horas normales</td><td style="text-align:right;font-weight:700;color:var(--g6)">' + t.hn.toFixed(1) + 'h = $' + t.montoNormal.toFixed(2) + '</td></tr>'
-    + (t.he>0 ? '<tr><td style="padding:4px 0;color:var(--A)">Horas extras (+' + t.recargo + '%)</td><td style="text-align:right;font-weight:700;color:var(--A)">' + t.he.toFixed(1) + 'h = $' + t.montoExtra.toFixed(2) + '</td></tr>' : '')
+    + (t.he>0 ? '<tr><td style="padding:4px 0;color:var(--A)">Horas extras' + (t.recargo===0?' (sin recargo)':' (+'+t.recargo+'%)') + '</td><td style="text-align:right;font-weight:700;color:var(--A)">' + t.he.toFixed(1) + 'h = $' + t.montoExtra.toFixed(2) + '</td></tr>' : '')
     + '</table>'
     + '<div style="font-size:20px;font-weight:800;color:var(--S);text-align:center;margin-top:12px;padding-top:12px;border-top:2px solid var(--g2)">SUBTOTAL: $' + t.subtotal.toFixed(2) + '</div>'
     + '<div style="font-size:11px;color:var(--g4);text-align:center;margin-top:4px">+ Bono (si aplica) se suma al confirmar</div>';
@@ -1175,7 +1175,7 @@ function renderPagos() {
       +'</div></div>'
       +'<div style="font-size:12px;color:var(--g5);margin-bottom:10px;line-height:1.7">'
       +'Periodo: ' + p.desde + ' a ' + p.hasta + ' - ' + p.dias + ' dias'
-      +(p.he>0?' (extra +'+(p.recargo||50)+'%)':'')
+      +(p.he>0?' (extra +'+((p.recargo===undefined||p.recargo===null)?50:p.recargo)+'%)':'')
       +(p.bono>0?' | Bono: $'+p.bono.toFixed(2):'')
       +(p.proyecto ? '<br>Proyecto: ' + esc(p.proyecto) : '')
       +(p.notas    ? '<br>Notas: '    + esc(p.notas)    : '')
