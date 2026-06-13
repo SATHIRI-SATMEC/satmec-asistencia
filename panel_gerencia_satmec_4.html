@@ -148,9 +148,14 @@ tr:hover td{background:var(--Pl)}
   <label>Bono adicional (opcional)</label>
   <div style="display:flex;align-items:center;gap:6px">
     <span style="font-size:15px;font-weight:700;color:var(--g4)">$</span>
-    <input type="number" id="pago-bono" value="0" min="0" step="0.50" style="text-align:center;flex:1" placeholder="0.00">
+    <input type="number" id="pago-bono" value="0" min="0" step="0.50" style="text-align:center;flex:1" placeholder="0.00" oninput="actualizarTotalPago()">
   </div>
   <p class="hint">Si aplica bono de rendimiento, transporte, alimentacion, etc.</p>
+  <div id="pago-total-final" style="background:linear-gradient(135deg,var(--Sb),#d4f0dd);border-radius:var(--rs);padding:16px;margin-top:12px;text-align:center">
+    <div style="font-size:11px;color:var(--g5);text-transform:uppercase;letter-spacing:.6px;font-weight:700">Total a pagar</div>
+    <div id="pago-total-val" style="font-size:30px;font-weight:800;color:var(--S);margin-top:4px">$0.00</div>
+    <div id="pago-total-desglose" style="font-size:11px;color:var(--g4);margin-top:4px"></div>
+  </div>
   <label>Metodo de pago</label>
   <select id="pago-metodo" onchange="toggleCompBanco()">
     <option value="Efectivo">Efectivo</option>
@@ -935,7 +940,24 @@ function abrirPago(i) {
     + '<div style="font-size:20px;font-weight:800;color:var(--S);text-align:center;margin-top:12px;padding-top:12px;border-top:2px solid var(--g2)">SUBTOTAL: $' + t.subtotal.toFixed(2) + '</div>'
     + '<div style="font-size:11px;color:var(--g4);text-align:center;margin-top:4px">+ Bono (si aplica) se suma al confirmar</div>';
   document.getElementById('pago-notas').value = '';
+  document.getElementById('pago-bono').value = '0';
+  document.getElementById('comp-banco-box').style.display = 'none';
+  compBancoBase64 = '';
+  document.getElementById('comp-banco-preview').style.display = 'none';
+  actualizarTotalPago();
   om('m-pago');
+}
+
+function actualizarTotalPago() {
+  var i = parseInt(document.getElementById('pago-idx').value);
+  var t = nomData[i];
+  if (!t) return;
+  var bono = parseFloat(document.getElementById('pago-bono').value) || 0;
+  var total = t.subtotal + bono;
+  document.getElementById('pago-total-val').textContent = '$' + total.toFixed(2);
+  var desglose = 'Subtotal: $' + t.subtotal.toFixed(2);
+  if (bono > 0) desglose += ' + Bono: $' + bono.toFixed(2);
+  document.getElementById('pago-total-desglose').textContent = desglose;
 }
 
 function confirmarPago() {
