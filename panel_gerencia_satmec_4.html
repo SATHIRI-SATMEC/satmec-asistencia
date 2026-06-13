@@ -234,11 +234,12 @@ tr:hover td{background:var(--Pl)}
     <div class="ct"><span class="ic">&#128269;</span>Filtrar registros</div>
     <div class="row2">
       <div><label>Periodo</label>
-        <select id="rf-fecha">
+        <select id="rf-fecha" onchange="toggleRangoFechas()">
           <option value="hoy">Hoy</option>
           <option value="semana">Esta semana</option>
           <option value="mes" selected>Este mes</option>
           <option value="todo">Todo</option>
+          <option value="rango">Rango de fechas...</option>
         </select>
       </div>
       <div><label>Proyecto</label><select id="rf-proy"><option value="">Todos</option></select></div>
@@ -246,6 +247,10 @@ tr:hover td{background:var(--Pl)}
     <div class="row2">
       <div><label>Supervisor</label><select id="rf-sup"><option value="">Todos</option></select></div>
       <div><label>Trabajador</label><select id="rf-trab"><option value="">Todos</option></select></div>
+    </div>
+    <div id="rf-rango-box" class="row2" style="display:none">
+      <div><label>Desde</label><input type="date" id="rf-desde"></div>
+      <div><label>Hasta</label><input type="date" id="rf-hasta"></div>
     </div>
     <button class="btn bp" style="margin-top:12px" onclick="aplicarFiltros()">Aplicar filtros</button>
   </div>
@@ -621,17 +626,33 @@ function llenarSelects() {
   fill('pf-proy',  unique(todosReg.map(function(r){return r.proyecto;})),   'Todos');
 }
 
+function toggleRangoFechas() {
+  var ff = document.getElementById('rf-fecha').value;
+  var box = document.getElementById('rf-rango-box');
+  box.style.display = (ff === 'rango') ? 'flex' : 'none';
+  if (ff === 'rango') {
+    var hoy = new Date();
+    if (!document.getElementById('rf-desde').value)
+      document.getElementById('rf-desde').value = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+    if (!document.getElementById('rf-hasta').value)
+      document.getElementById('rf-hasta').value = hoy.toISOString().split('T')[0];
+  }
+}
+
 function aplicarFiltros() {
   var ff  = document.getElementById('rf-fecha').value;
   var fp  = document.getElementById('rf-proy').value;
   var fs  = document.getElementById('rf-sup').value;
   var ft  = document.getElementById('rf-trab').value;
   var hoy = new Date().toISOString().split('T')[0];
+  var desde = (document.getElementById('rf-desde')||{}).value || '';
+  var hasta = (document.getElementById('rf-hasta')||{}).value || '';
   filtReg = todosReg.filter(function(r) {
     var fd = r.fecha, ok = true;
     if (ff==='hoy')    ok = fd === hoy;
     else if (ff==='semana') ok = fd && (new Date()-new Date(fd))/86400000 <= 7;
     else if (ff==='mes')    ok = fd && fd.slice(0,7) === hoy.slice(0,7);
+    else if (ff==='rango')  ok = fd && (!desde || fd >= desde) && (!hasta || fd <= hasta);
     if (fp) ok = ok && r.proyecto  === fp;
     if (fs) ok = ok && r.supervisor === fs;
     if (ft) ok = ok && r.trabajador === ft;
