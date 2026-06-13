@@ -165,10 +165,16 @@ tr:hover td{background:var(--Pl)}
   <div id="comp-banco-box" style="display:none;margin-top:12px;padding:14px;background:var(--Pl);border-radius:var(--rs);border:2px dashed var(--P)">
     <label style="margin-top:0;color:var(--P);font-weight:700">Adjuntar comprobante de transferencia</label>
     <p class="hint" style="margin-bottom:10px">Suba foto o captura del comprobante del banco</p>
-    <input type="file" id="comp-banco-file" accept="image/*" capture="environment" style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
+    <input type="file" id="comp-banco-file" accept="image/*,application/pdf" style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
+    <p class="hint" style="margin-top:6px">Acepta imagen (foto/captura) o PDF</p>
     <div id="comp-banco-preview" style="display:none;margin-top:10px;text-align:center">
-      <img id="comp-banco-img" style="max-width:100%;max-height:300px;border-radius:var(--rsm);box-shadow:var(--sh)">
-      <button class="btn bo bsm" style="margin-top:8px;font-size:11px" onclick="quitarCompBanco()">Quitar imagen</button>
+      <img id="comp-banco-img" style="max-width:100%;max-height:300px;border-radius:var(--rsm);box-shadow:var(--sh);display:none">
+      <div id="comp-banco-pdf" style="display:none;padding:16px;background:var(--white);border-radius:var(--rsm);box-shadow:var(--sh)">
+        <div style="font-size:32px">&#128196;</div>
+        <div id="comp-banco-pdf-name" style="font-size:12px;color:var(--P);font-weight:700;margin-top:6px;word-break:break-all"></div>
+        <div style="font-size:11px;color:var(--g4);margin-top:2px">PDF adjuntado</div>
+      </div>
+      <button class="btn bo bsm" style="margin-top:8px;font-size:11px" onclick="quitarCompBanco()">Quitar archivo</button>
     </div>
   </div>
   <label>Notas</label>
@@ -994,13 +1000,13 @@ function confirmarPago() {
     bono:bono, monto:totalConBono, valorDia:t.valorDia,
     metodo:document.getElementById('pago-metodo').value,
     notas:document.getElementById('pago-notas').value,
-    compBanco:compBanco,
+    compBanco:compBanco, compBancoTipo:compBancoTipo, compBancoNombre:compBancoNombre,
     fecha_pago:new Date().toISOString().split('T')[0],
     hora_pago:new Date().toLocaleTimeString(),
     estado:'cancelado'
   };
   // Limpiar comprobante bancario para el siguiente pago
-  compBancoBase64 = '';
+  compBancoBase64 = ''; compBancoTipo = ''; compBancoNombre = '';
   document.getElementById('comp-banco-file').value = '';
   document.getElementById('comp-banco-preview').style.display = 'none';
   document.getElementById('comp-banco-box').style.display = 'none';
@@ -1076,11 +1082,20 @@ function mostrarComp(pago) {
     +'<div class="comp-total-lbl">TOTAL PAGADO' + (pago.bono > 0 ? ' (incluye bono)' : '') + '</div>'
     +'<div class="comp-est">CANCELADO</div>'
     +'</div>'
-    +(pago.compBanco ? '<div class="comp-banco-section"><div class="comp-banco-title">Comprobante de transferencia</div><img src="' + pago.compBanco + '"></div>' : '');
+    +(pago.compBanco
+      ? '<div class="comp-banco-section"><div class="comp-banco-title">Comprobante de transferencia</div>'
+        + (pago.compBancoTipo === 'pdf'
+          ? '<div style="padding:16px;text-align:center"><div style="font-size:40px">&#128196;</div>'
+            + '<a href="' + pago.compBanco + '" download="' + (pago.compBancoNombre || ('comprobante_' + pago.id + '.pdf')) + '" style="display:inline-block;margin-top:8px;background:#0078d4;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">Descargar PDF del banco</a></div>'
+          : '<img src="' + pago.compBanco + '">')
+        + '</div>'
+      : '');
   om('m-comp');
 }
 
 var compBancoBase64 = '';
+var compBancoTipo = '';
+var compBancoNombre = '';
 
 function toggleCompBanco() {
   var metodo = document.getElementById('pago-metodo').value;
@@ -1094,8 +1109,12 @@ function toggleCompBanco() {
 
 function quitarCompBanco() {
   compBancoBase64 = '';
+  compBancoTipo = '';
+  compBancoNombre = '';
   document.getElementById('comp-banco-file').value = '';
   document.getElementById('comp-banco-preview').style.display = 'none';
+  document.getElementById('comp-banco-img').style.display = 'none';
+  document.getElementById('comp-banco-pdf').style.display = 'none';
 }
 
 // Leer y comprimir imagen del comprobante bancario
@@ -1105,26 +1124,48 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInput.addEventListener('change', function(e) {
       var file = e.target.files[0];
       if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function(ev) {
-        var img = new Image();
-        img.onload = function() {
-          // Comprimir a max 800px de ancho para no saturar localStorage
-          var canvas = document.createElement('canvas');
-          var maxW = 800;
-          var w = img.width, h = img.height;
-          if (w > maxW) { h = h * maxW / w; w = maxW; }
-          canvas.width = w; canvas.height = h;
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-          compBancoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-          // Mostrar preview
-          document.getElementById('comp-banco-img').src = compBancoBase64;
-          document.getElementById('comp-banco-preview').style.display = 'block';
+      var esPDF = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      var imgEl = document.getElementById('comp-banco-img');
+      var pdfEl = document.getElementById('comp-banco-pdf');
+      var prevEl = document.getElementById('comp-banco-preview');
+      if (esPDF) {
+        // PDF: guardar tal cual en base64 (sin comprimir)
+        var readerPdf = new FileReader();
+        readerPdf.onload = function(ev) {
+          compBancoBase64 = ev.target.result;
+          compBancoTipo = 'pdf';
+          compBancoNombre = file.name;
+          imgEl.style.display = 'none';
+          pdfEl.style.display = 'block';
+          document.getElementById('comp-banco-pdf-name').textContent = file.name;
+          prevEl.style.display = 'block';
         };
-        img.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
+        readerPdf.readAsDataURL(file);
+      } else {
+        // Imagen: comprimir a max 800px
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var maxW = 800;
+            var w = img.width, h = img.height;
+            if (w > maxW) { h = h * maxW / w; w = maxW; }
+            canvas.width = w; canvas.height = h;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            compBancoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            compBancoTipo = 'imagen';
+            compBancoNombre = file.name;
+            imgEl.src = compBancoBase64;
+            imgEl.style.display = 'block';
+            pdfEl.style.display = 'none';
+            prevEl.style.display = 'block';
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
     });
   }
 });
