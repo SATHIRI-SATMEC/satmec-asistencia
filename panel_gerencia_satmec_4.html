@@ -313,6 +313,7 @@ tr:hover td{background:var(--Pl)}
       <select id="pf-proy" onchange="renderPagos()" style="flex:1;font-size:13px;padding:10px 12px"><option value="">Todos proyectos</option></select>
     </div>
     <div id="pagos-list"></div>
+    <button class="btn" style="margin-top:14px;background:var(--Db);color:var(--D);font-size:13px;padding:12px" onclick="borrarTodosPagos()">Borrar TODO el historial de pagos</button>
   </div>
 
   <div id="tn-cargos" style="display:none">
@@ -381,10 +382,56 @@ window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('nom-hasta').value  = hoy.toISOString().split('T')[0];
   renderCargos();
   cargarRegistros();
+  cargarPagosSheets();
   document.querySelectorAll('.mbk').forEach(function(el) {
     el.addEventListener('click', function(e) { if (e.target === el) cm(el.id); });
   });
 });
+
+// Cargar pagos guardados en Google Sheets (hoja Pagos)
+function cargarPagosSheets() {
+  fetch(SHEET_URL + '?hoja=pagos&t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(raw) {
+      if (!Array.isArray(raw) || raw.length < 2) return; // sin pagos en Sheets
+      var sheetPagos = raw.slice(1).filter(function(r) { return r[0]; }).map(function(r) {
+        return {
+          id: String(r[0]),
+          trabajador: r[1]  || '',
+          cargo:      r[2]  || '',
+          proyecto:   r[3]  || '',
+          desde:      parseFecha(r[4]),
+          hasta:      parseFecha(r[5]),
+          dias:       parseInt(r[6])    || 0,
+          hn:         parseFloat(r[7])  || 0,
+          he:         parseFloat(r[8])  || 0,
+          recargo:    parseInt(r[9])    || 0,
+          montoNormal:parseFloat(r[10]) || 0,
+          montoExtra: parseFloat(r[11]) || 0,
+          monto:      parseFloat(r[12]) || 0,
+          valorDia:   parseFloat(r[13]) || 0,
+          metodo:     r[14] || '',
+          notas:      r[15] || '',
+          fecha_pago: parseFecha(r[16]),
+          hora_pago:  r[17] || '',
+          estado:     r[18] || 'cancelado'
+        };
+      });
+      // Combinar: Sheets es la fuente principal, agregar locales que no esten
+      var ids = {};
+      sheetPagos.forEach(function(p) { ids[p.id] = 1; });
+      var localExtra = pagosData.filter(function(p) { return !ids[p.id]; });
+      pagosData = sheetPagos.concat(localExtra);
+      localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
+    })
+    .catch(function() { /* sin conexion - usar localStorage */ });
+}
+
+// Enviar un pago a Google Sheets (hoja Pagos)
+function guardarPagoSheets(pago) {
+  var body = Object.assign({_tipo:'pago'}, pago);
+  fetch(SHEET_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+}
 
 function esc(s) {
   return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -854,9 +901,10 @@ function confirmarPago() {
   };
   pagosData.push(pago);
   localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
+  guardarPagoSheets(pago);
   nomData[i].estado='cancelado'; nomData[i].pagoId=pago.id;
   renderNomTabla(); cm('m-pago');
-  showAlert('ok','Pago registrado: ' + t.trabajador + ' $' + t.subtotal.toFixed(2),'nom');
+  showAlert('ok','Pago registrado y respaldado en Google Sheets: ' + t.trabajador + ' $' + t.subtotal.toFixed(2),'nom');
   setTimeout(function() { mostrarComp(pago); }, 500);
 }
 
@@ -878,11 +926,12 @@ function pagarTodos() {
         estado:'cancelado'
       };
       pagosData.push(pago);
+      guardarPagoSheets(pago);
       nomData[idx].estado='cancelado'; nomData[idx].pagoId=pago.id;
     });
     localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
     renderNomTabla(); cm('m-confirm');
-    showAlert('ok', pend.length + ' pagos registrados','nom');
+    showAlert('ok', pend.length + ' pagos registrados y respaldados en Google Sheets','nom');
   });
 }
 
@@ -982,6 +1031,18 @@ function renderPagos() {
   });
 }
 
+function borrarTodosPagos() {
+  if (!pagosData.length) { showAlert('err','No hay pagos para borrar','nom'); return; }
+  confirm2('ATENCION: Se borraran ' + pagosData.length + ' pago(s) del historial local Y de Google Sheets de forma permanente. Esta accion NO se puede deshacer. Desea continuar?', function() {
+    pagosData = [];
+    localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
+    fetch(SHEET_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify({_action:'borrar_pagos'})});
+    renderPagos();
+    cm('m-confirm');
+    showAlert('ok','Historial de pagos borrado completamente','nom');
+  });
+}
+
 // PROYECTOS GASTO
 function renderProyectos() {
   var gastos = {};
@@ -1056,7 +1117,7 @@ function sTabNom(t, el) {
   });
   document.querySelectorAll('#view-nom .ptab').forEach(function(b){ b.classList.remove('active'); });
   if (el) el.classList.add('active');
-  if (t==='pagos')  renderPagos();
+  if (t==='pagos')  { renderPagos(); cargarPagosSheets(); setTimeout(renderPagos, 2000); }
   if (t==='cargos') renderCargosList('cargo-list2');
 }
 </script>
