@@ -987,6 +987,19 @@ function actualizarTotalPago() {
   document.getElementById('pago-total-desglose').textContent = desglose;
 }
 
+function generarIdPago(nombre) {
+  // Iniciales del trabajador (max 3 letras)
+  var iniciales = (nombre || 'XX').split(' ')
+    .map(function(p){ return p.charAt(0); })
+    .join('').toUpperCase().slice(0,3);
+  var hoy = new Date().toISOString().split('T')[0]; // 2026-06-13
+  // Contador del dia para evitar duplicados
+  var base = iniciales + '-' + hoy;
+  var existentes = pagosData.filter(function(p){ return p.id && p.id.indexOf(base) === 0; }).length;
+  var num = ('00' + (existentes + 1)).slice(-2);
+  return base + '-' + num; // ej. JA-2026-06-13-01
+}
+
 function confirmarPago() {
   var i = parseInt(document.getElementById('pago-idx').value);
   var t = nomData[i]; if (!t) return;
@@ -994,7 +1007,7 @@ function confirmarPago() {
   var totalConBono = t.subtotal + bono;
   var compBanco = compBancoBase64 || '';
   var pago = {
-    id:'PAG-'+Date.now(), trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
+    id:generarIdPago(t.trabajador), trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
     desde:t.desde, hasta:t.hasta, dias:t.dias,
     hn:t.hn, he:t.he, recargo:t.recargo, montoNormal:t.montoNormal, montoExtra:t.montoExtra,
     bono:bono, monto:totalConBono, valorDia:t.valorDia,
@@ -1027,7 +1040,7 @@ function pagarTodos() {
     pend.forEach(function(t) {
       var idx = nomData.indexOf(t);
       var pago = {
-        id:'PAG-'+Date.now()+'-'+idx, trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
+        id:generarIdPago(t.trabajador), trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
         desde:t.desde, hasta:t.hasta, dias:t.dias,
         hn:t.hn, he:t.he, recargo:t.recargo, montoNormal:t.montoNormal, montoExtra:t.montoExtra,
         monto:t.subtotal, valorDia:t.valorDia,
@@ -1057,13 +1070,16 @@ function verCompPorId(id) {
   if (pago) mostrarComp(pago);
 }
 
+var pagoActual = null;
 function mostrarComp(pago) {
+  pagoActual = pago;
   document.getElementById('comp-body').innerHTML =
     '<div class="comp-hdr">'
     +'<img src="data:image/png;base64,' + LOGO_B64 + '" style="height:44px;margin-bottom:8px">'
     +'<div class="comp-logo">SATMEC</div>'
     +'<div class="comp-sub">Proyectos Industriales</div>'
     +'<div class="comp-num">' + pago.id + '</div>'
+    +'<div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:8px">Cancela periodo: ' + pago.desde + ' al ' + pago.hasta + '</div>'
     +'</div>'
     +'<div class="comp-row"><span>Trabajador</span><strong>' + esc(pago.trabajador) + '</strong></div>'
     +'<div class="comp-row"><span>Cargo</span><strong>' + esc(pago.cargo) + '</strong></div>'
@@ -1217,8 +1233,13 @@ function guardarOneDrive() {
 
 function imprimirComp() {
   var contenido = document.getElementById('comp-body').innerHTML;
+  var nombrePDF = 'Comprobante_SATMEC';
+  if (pagoActual) {
+    var trab = (pagoActual.trabajador||'').replace(/[^a-zA-Z0-9 ]/g,'').trim().replace(/ /g,'_');
+    nombrePDF = 'PAGO_' + trab + '_' + pagoActual.id;
+  }
   var v = window.open('','_blank');
-  v.document.write('<!DOCTYPE html><html><head><title>Comprobante SATMEC</title>'
+  v.document.write('<!DOCTYPE html><html><head><title>' + nombrePDF + '</title>'
     +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">'
     +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:DM Sans,sans-serif;padding:24px;max-width:420px;margin:0 auto;color:#1a1d2e}'
     +'.comp-hdr{background:linear-gradient(135deg,#060f28,#0d2b5e);color:#fff;padding:22px;border-radius:14px;margin-bottom:16px;text-align:center}'
