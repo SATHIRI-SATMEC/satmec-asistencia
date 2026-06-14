@@ -195,11 +195,54 @@ tr:hover td{background:var(--Pl)}
   <div class="mhandle"></div>
   <div class="mhdr"><span class="mtitle">Comprobante</span><button class="mclose" onclick="cm('m-comp')">x</button></div>
   <div id="comp-body"></div>
-  <button class="btn bs" style="margin-top:16px;width:100%" onclick="descargarPDFCompleto()" id="btn-pdf-completo">Descargar PDF completo (recibo + comprobante banco)</button>
+  <button class="btn bs" style="margin-top:16px;width:100%" onclick="descargarPDFCompleto()" id="btn-pdf-completo">Guardar PDF completo (recibo + comprobante banco)</button>
   <div style="display:flex;gap:8px;margin-top:8px">
     <button class="btn bo" onclick="cm('m-comp')" style="flex:1">Cerrar</button>
     <button class="btn bp" onclick="imprimirComp()" style="flex:1">Imprimir</button>
-    <button class="btn" style="flex:1;background:#0078d4;color:#fff" onclick="guardarOneDrive()">OneDrive</button>
+    <button class="btn" style="flex:1;background:var(--A);color:#fff" onclick="editarPagoActual()">Editar pago</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL EDITAR PAGO -->
+<div class="mbk" id="m-edit-pago">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><span class="mtitle">Editar pago</span><button class="mclose" onclick="cm('m-edit-pago')">x</button></div>
+  <input type="hidden" id="edit-pago-idx">
+  <div id="edit-pago-info" style="background:var(--Pl);border-radius:var(--rs);padding:14px;margin-bottom:14px"></div>
+  <label>Bono adicional</label>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span style="font-size:15px;font-weight:700;color:var(--g4)">$</span>
+    <input type="number" id="edit-pago-bono" value="0" min="0" step="0.50" style="text-align:center;flex:1" oninput="actualizarEditTotal()">
+  </div>
+  <div style="background:linear-gradient(135deg,var(--Sb),#d4f0dd);border-radius:var(--rs);padding:14px;margin-top:12px;text-align:center">
+    <div style="font-size:11px;color:var(--g5);text-transform:uppercase;letter-spacing:.6px;font-weight:700">Total a pagar</div>
+    <div id="edit-pago-total" style="font-size:26px;font-weight:800;color:var(--S);margin-top:4px">$0.00</div>
+  </div>
+  <label>Metodo de pago</label>
+  <select id="edit-pago-metodo" onchange="toggleEditCompBanco()">
+    <option value="Efectivo">Efectivo</option>
+    <option value="Transferencia">Transferencia bancaria</option>
+    <option value="Cheque">Cheque</option>
+  </select>
+  <div id="edit-comp-banco-box" style="display:none;margin-top:12px;padding:14px;background:var(--Pl);border-radius:var(--rs);border:2px dashed var(--P)">
+    <label style="margin-top:0;color:var(--P);font-weight:700">Cambiar comprobante de transferencia</label>
+    <p class="hint" style="margin-bottom:10px">Suba uno nuevo si desea reemplazarlo (imagen o PDF)</p>
+    <input type="file" id="edit-comp-banco-file" accept="image/*,application/pdf" style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
+    <div id="edit-comp-banco-preview" style="display:none;margin-top:10px;text-align:center">
+      <img id="edit-comp-banco-img" style="max-width:100%;max-height:200px;border-radius:var(--rsm);display:none">
+      <div id="edit-comp-banco-pdf" style="display:none;padding:12px;background:var(--white);border-radius:var(--rsm)">
+        <div style="font-size:28px">&#128196;</div>
+        <div id="edit-comp-banco-pdf-name" style="font-size:11px;color:var(--P);font-weight:700;margin-top:4px"></div>
+      </div>
+    </div>
+  </div>
+  <label>Notas</label>
+  <textarea id="edit-pago-notas" style="min-height:60px"></textarea>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn" style="flex:1;background:var(--Db);color:var(--D)" onclick="eliminarPagoActual()">Eliminar pago</button>
+    <button class="btn bs" style="flex:2" onclick="guardarEdicionPago()">Guardar cambios</button>
   </div>
 </div>
 </div>
@@ -1116,6 +1159,9 @@ function mostrarComp(pago) {
 var compBancoBase64 = '';
 var compBancoTipo = '';
 var compBancoNombre = '';
+var editCompBancoBase64 = '';
+var editCompBancoTipo = '';
+var editCompBancoNombre = '';
 
 function toggleCompBanco() {
   var metodo = document.getElementById('pago-metodo').value;
@@ -1188,6 +1234,52 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+  // Handler para el comprobante en EDICION
+  var editFileInput = document.getElementById('edit-comp-banco-file');
+  if (editFileInput) {
+    editFileInput.addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var esPDF = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      var imgEl = document.getElementById('edit-comp-banco-img');
+      var pdfEl = document.getElementById('edit-comp-banco-pdf');
+      var prevEl = document.getElementById('edit-comp-banco-preview');
+      if (esPDF) {
+        var rp = new FileReader();
+        rp.onload = function(ev) {
+          editCompBancoBase64 = ev.target.result;
+          editCompBancoTipo = 'pdf';
+          editCompBancoNombre = file.name;
+          imgEl.style.display = 'none';
+          pdfEl.style.display = 'block';
+          document.getElementById('edit-comp-banco-pdf-name').textContent = file.name;
+          prevEl.style.display = 'block';
+        };
+        rp.readAsDataURL(file);
+      } else {
+        var r = new FileReader();
+        r.onload = function(ev) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var maxW = 800, w = img.width, h = img.height;
+            if (w > maxW) { h = h * maxW / w; w = maxW; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            editCompBancoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+            editCompBancoTipo = 'imagen';
+            editCompBancoNombre = file.name;
+            imgEl.src = editCompBancoBase64;
+            imgEl.style.display = 'block';
+            pdfEl.style.display = 'none';
+            prevEl.style.display = 'block';
+          };
+          img.src = ev.target.result;
+        };
+        r.readAsDataURL(file);
+      }
+    });
+  }
 });
 
 async function descargarPDFCompleto() {
@@ -1254,10 +1346,10 @@ async function descargarPDFCompleto() {
       bancoPages.forEach(function(p){ mergedPdf.addPage(p); });
       // Descargar
       var mergedBytes = await mergedPdf.save();
-      descargarBytes(mergedBytes, nombrePDF);
+      await descargarBytes(mergedBytes, nombrePDF);
     } else {
       // Solo el recibo (con o sin imagen)
-      descargarBytes(new Uint8Array(reciboPdfBytes), nombrePDF);
+      await descargarBytes(new Uint8Array(reciboPdfBytes), nombrePDF);
     }
 
     showAlert('ok', 'PDF generado: ' + nombrePDF, 'nom');
@@ -1267,8 +1359,25 @@ async function descargarPDFCompleto() {
   btn.textContent = txtOrig; btn.disabled = false;
 }
 
-function descargarBytes(bytes, nombre) {
+async function descargarBytes(bytes, nombre) {
   var blob = new Blob([bytes], {type:'application/pdf'});
+  // Si el navegador soporta elegir carpeta (Chrome/Edge), preguntar donde guardar
+  if (window.showSaveFilePicker) {
+    try {
+      var handle = await window.showSaveFilePicker({
+        suggestedName: nombre,
+        types: [{ description: 'Archivo PDF', accept: {'application/pdf': ['.pdf']} }]
+      });
+      var writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return; // usuario cancelo
+      // si falla, continuar con descarga normal
+    }
+  }
+  // Descarga normal (va a la carpeta de Descargas)
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = nombre;
@@ -1276,49 +1385,79 @@ function descargarBytes(bytes, nombre) {
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
 }
 
-function guardarOneDrive() {
-  // Generar nombre del archivo: PAGO_Trabajador_Fecha_ID.html
-  var comp = document.getElementById('comp-body');
-  if (!comp) return;
-  var contenido = comp.innerHTML;
-  // Extraer datos del comprobante para el nombre
-  var rows = comp.querySelectorAll('.comp-row strong');
-  var trabajador = rows[0] ? rows[0].textContent.replace(/[^a-zA-Z0-9 ]/g,'').trim().replace(/ /g,'_') : 'pago';
-  var fecha = rows.length > 5 ? rows[5].textContent.split(' ')[0] : new Date().toISOString().split('T')[0];
-  var numPago = comp.querySelector('.comp-num') ? comp.querySelector('.comp-num').textContent : 'PAG';
-  var nombreArchivo = 'PAGO_' + trabajador + '_' + fecha + '_' + numPago + '.html';
+function editarPagoActual() {
+  if (!pagoActual) { showAlert('err','No hay pago activo','nom'); return; }
+  // Buscar el indice del pago en pagosData
+  var idx = pagosData.findIndex(function(p){ return p.id === pagoActual.id; });
+  if (idx < 0) { showAlert('err','No se encontro el pago','nom'); return; }
+  var p = pagosData[idx];
+  // Llenar el modal de edicion
+  document.getElementById('edit-pago-idx').value = idx;
+  document.getElementById('edit-pago-bono').value = p.bono || 0;
+  document.getElementById('edit-pago-metodo').value = p.metodo || 'Efectivo';
+  document.getElementById('edit-pago-notas').value = p.notas || '';
+  document.getElementById('edit-pago-info').innerHTML =
+    '<div style="font-size:15px;font-weight:800;color:var(--P)">' + esc(p.trabajador) + '</div>'
+    + '<div style="font-size:12px;color:var(--g4);margin-top:4px">' + p.id + '</div>'
+    + '<div style="font-size:12px;color:var(--g5);margin-top:6px">Subtotal (horas): $' + (p.montoNormal + p.montoExtra).toFixed(2) + '</div>';
+  cm('m-comp');
+  om('m-edit-pago');
+  toggleEditCompBanco();
+  actualizarEditTotal();
+}
 
-  // Crear archivo HTML del comprobante
-  var htmlComp = '<!DOCTYPE html><html><head><title>Comprobante ' + numPago + '</title>'
-    + '<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">'
-    + '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:DM Sans,sans-serif;padding:24px;max-width:420px;margin:0 auto;color:#1a1d2e}'
-    + '.comp-hdr{background:linear-gradient(135deg,#060f28,#0d2b5e);color:#fff;padding:22px;border-radius:14px;margin-bottom:16px;text-align:center}'
-    + '.comp-logo{font-size:24px;font-weight:800;letter-spacing:1px;margin-top:8px}'
-    + '.comp-sub{font-size:11px;opacity:.65;text-transform:uppercase;letter-spacing:.8px;margin-top:3px}'
-    + '.comp-num{background:#e88f00;color:#fff;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-top:10px;display:inline-block}'
-    + '.comp-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eaedf2;font-size:13px}'
-    + '.comp-row strong{color:#0d2b5e;text-align:right;max-width:55%}'
-    + '.comp-total{background:#e8edf6;border-radius:12px;padding:18px;margin-top:14px;text-align:center}'
-    + '.comp-total-val{font-size:34px;font-weight:800;color:#0d2b5e}'
-    + '.comp-total-lbl{font-size:12px;color:#8c94a6;margin-top:3px;text-transform:uppercase;letter-spacing:.6px}'
-    + '.comp-est{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;margin-top:12px;background:#eaf4ee;color:#1a7a3a}'
-    + '.comp-banco-section{margin-top:16px;padding:14px;background:#e8edf6;border-radius:12px;text-align:center}'
-    + '.comp-banco-section img{max-width:100%;border-radius:8px;margin-top:8px}'
-    + '.comp-banco-title{font-size:12px;font-weight:700;color:#0d2b5e;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}'
-    + '</style></head><body>' + contenido + '</body></html>';
+function toggleEditCompBanco() {
+  var metodo = document.getElementById('edit-pago-metodo').value;
+  document.getElementById('edit-comp-banco-box').style.display = (metodo === 'Transferencia') ? 'block' : 'none';
+}
 
-  // Descargar el archivo con nombre especifico
-  var blob = new Blob([htmlComp], {type: 'text/html;charset=utf-8;'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = nombreArchivo;
-  a.click();
+function actualizarEditTotal() {
+  var idx = parseInt(document.getElementById('edit-pago-idx').value);
+  var p = pagosData[idx];
+  if (!p) return;
+  var subtotal = p.montoNormal + p.montoExtra;
+  var bono = parseFloat(document.getElementById('edit-pago-bono').value) || 0;
+  document.getElementById('edit-pago-total').textContent = '$' + (subtotal + bono).toFixed(2);
+}
 
-  // Abrir OneDrive para que suba el archivo a la carpeta
-  setTimeout(function() {
-    window.open('https://onedrive.live.com', '_blank');
-    showAlert('ok', 'Archivo descargado: ' + nombreArchivo + '. Subalo a su carpeta en OneDrive.', 'nom');
-  }, 1000);
+function guardarEdicionPago() {
+  var idx = parseInt(document.getElementById('edit-pago-idx').value);
+  var p = pagosData[idx];
+  if (!p) return;
+  var subtotal = p.montoNormal + p.montoExtra;
+  var bono = parseFloat(document.getElementById('edit-pago-bono').value) || 0;
+  p.bono = bono;
+  p.monto = subtotal + bono;
+  p.metodo = document.getElementById('edit-pago-metodo').value;
+  p.notas = document.getElementById('edit-pago-notas').value;
+  // Si subio nuevo comprobante en la edicion
+  if (editCompBancoBase64) {
+    p.compBanco = editCompBancoBase64;
+    p.compBancoTipo = editCompBancoTipo;
+    p.compBancoNombre = editCompBancoNombre;
+  }
+  pagosData[idx] = p;
+  localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
+  // Resetear comprobante de edicion
+  editCompBancoBase64 = ''; editCompBancoTipo = ''; editCompBancoNombre = '';
+  cm('m-edit-pago');
+  renderPagos();
+  showAlert('ok', 'Pago actualizado correctamente', 'nom');
+  // Mostrar el comprobante actualizado
+  setTimeout(function(){ mostrarComp(p); }, 400);
+}
+
+function eliminarPagoActual() {
+  var idx = parseInt(document.getElementById('edit-pago-idx').value);
+  var p = pagosData[idx];
+  if (!p) return;
+  confirm2('Eliminar este pago de ' + esc(p.trabajador) + ' por $' + p.monto.toFixed(2) + '? El trabajador volvera a aparecer como pendiente.', function() {
+    pagosData.splice(idx, 1);
+    localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
+    cm('m-confirm'); cm('m-edit-pago');
+    renderPagos();
+    showAlert('ok', 'Pago eliminado', 'nom');
+  });
 }
 
 function imprimirComp() {
