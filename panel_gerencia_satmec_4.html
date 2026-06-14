@@ -9,6 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="SATMEC Gerencia">
 <title>SATMEC Panel Gerencia</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <style>
 :root{
   --P:#0d2b5e;--Pm:#1a3f7a;--Pl:#e8edf6;
@@ -192,9 +195,10 @@ tr:hover td{background:var(--Pl)}
   <div class="mhandle"></div>
   <div class="mhdr"><span class="mtitle">Comprobante</span><button class="mclose" onclick="cm('m-comp')">x</button></div>
   <div id="comp-body"></div>
-  <div style="display:flex;gap:8px;margin-top:16px">
+  <button class="btn bs" style="margin-top:16px;width:100%" onclick="descargarPDFCompleto()" id="btn-pdf-completo">Descargar PDF completo (recibo + comprobante banco)</button>
+  <div style="display:flex;gap:8px;margin-top:8px">
     <button class="btn bo" onclick="cm('m-comp')" style="flex:1">Cerrar</button>
-    <button class="btn bp" onclick="imprimirComp()" style="flex:1">Imprimir / PDF</button>
+    <button class="btn bp" onclick="imprimirComp()" style="flex:1">Imprimir</button>
     <button class="btn" style="flex:1;background:#0078d4;color:#fff" onclick="guardarOneDrive()">OneDrive</button>
   </div>
 </div>
@@ -1185,6 +1189,92 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+async function descargarPDFCompleto() {
+  if (!pagoActual) { showAlert('err','No hay comprobante activo','nom'); return; }
+  var btn = document.getElementById('btn-pdf-completo');
+  var txtOrig = btn.textContent;
+  btn.textContent = 'Generando PDF...'; btn.disabled = true;
+
+  try {
+    var trab = (pagoActual.trabajador||'').replace(/[^a-zA-Z0-9 ]/g,'').trim().replace(/ /g,'_');
+    var nombrePDF = 'PAGO_' + trab + '_' + pagoActual.id + '.pdf';
+
+    // PASO 1: Convertir el recibo SATMEC (sin la imagen del banco) a PDF con jsPDF
+    var jsPDFlib = window.jspdf.jsPDF;
+    var pdf = new jsPDFlib('p', 'mm', 'a4');
+
+    // Capturar solo la parte del recibo (sin la seccion del banco que puede ser PDF)
+    var compBody = document.getElementById('comp-body');
+    var bancoSection = compBody.querySelector('.comp-banco-section');
+    var bancoHTML = '';
+    if (bancoSection) { bancoHTML = bancoSection.outerHTML; bancoSection.style.display = 'none'; }
+
+    var canvas = await html2canvas(compBody, {scale:2, backgroundColor:'#ffffff'});
+    if (bancoSection) bancoSection.style.display = '';
+
+    var imgData = canvas.toDataURL('image/jpeg', 0.92);
+    var pw = pdf.internal.pageSize.getWidth();
+    var ph = pdf.internal.pageSize.getHeight();
+    var imgW = pw - 20;
+    var imgH = canvas.height * imgW / canvas.width;
+    var y = 10;
+    if (imgH > ph - 20) imgH = ph - 20;
+    pdf.addImage(imgData, 'JPEG', 10, y, imgW, imgH);
+
+    // PASO 2: Si el comprobante del banco es IMAGEN, agregarla como nueva pagina
+    if (pagoActual.compBanco && pagoActual.compBancoTipo === 'imagen') {
+      pdf.addPage();
+      pdf.setFontSize(12);
+      pdf.text('Comprobante de transferencia bancaria', 10, 15);
+      var bImg = new Image();
+      await new Promise(function(res){ bImg.onload = res; bImg.src = pagoActual.compBanco; });
+      var bw = pw - 20;
+      var bh = bImg.height * bw / bImg.width;
+      if (bh > ph - 30) { bh = ph - 30; bw = bImg.width * bh / bImg.height; }
+      pdf.addImage(pagoActual.compBanco, 'JPEG', 10, 22, bw, bh);
+    }
+
+    // Obtener el PDF del recibo como bytes
+    var reciboPdfBytes = pdf.output('arraybuffer');
+
+    // PASO 3: Si el comprobante del banco es PDF, unirlo con pdf-lib
+    if (pagoActual.compBanco && pagoActual.compBancoTipo === 'pdf') {
+      var PDFLib = window.PDFLib;
+      var mergedPdf = await PDFLib.PDFDocument.create();
+      // Agregar paginas del recibo
+      var reciboDoc = await PDFLib.PDFDocument.load(reciboPdfBytes);
+      var reciboPages = await mergedPdf.copyPages(reciboDoc, reciboDoc.getPageIndices());
+      reciboPages.forEach(function(p){ mergedPdf.addPage(p); });
+      // Agregar paginas del comprobante del banco
+      var bancoBase64 = pagoActual.compBanco.split(',')[1];
+      var bancoBytes = Uint8Array.from(atob(bancoBase64), function(c){ return c.charCodeAt(0); });
+      var bancoDoc = await PDFLib.PDFDocument.load(bancoBytes);
+      var bancoPages = await mergedPdf.copyPages(bancoDoc, bancoDoc.getPageIndices());
+      bancoPages.forEach(function(p){ mergedPdf.addPage(p); });
+      // Descargar
+      var mergedBytes = await mergedPdf.save();
+      descargarBytes(mergedBytes, nombrePDF);
+    } else {
+      // Solo el recibo (con o sin imagen)
+      descargarBytes(new Uint8Array(reciboPdfBytes), nombrePDF);
+    }
+
+    showAlert('ok', 'PDF generado: ' + nombrePDF, 'nom');
+  } catch(err) {
+    showAlert('err', 'Error al generar PDF: ' + err.message, 'nom');
+  }
+  btn.textContent = txtOrig; btn.disabled = false;
+}
+
+function descargarBytes(bytes, nombre) {
+  var blob = new Blob([bytes], {type:'application/pdf'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
 
 function guardarOneDrive() {
   // Generar nombre del archivo: PAGO_Trabajador_Fecha_ID.html
