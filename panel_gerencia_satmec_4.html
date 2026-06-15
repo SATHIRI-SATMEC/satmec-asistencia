@@ -350,8 +350,14 @@ tr:hover td{background:var(--Pl)}
         <div><label>Desde</label><input type="date" id="nom-desde"></div>
         <div><label>Hasta</label><input type="date" id="nom-hasta"></div>
       </div>
-      <label>Proyecto (opcional)</label>
-      <select id="nom-proy"><option value="">Todos los proyectos</option></select>
+      <div class="row2" style="margin-top:0">
+        <div><label>Proyecto (opcional)</label>
+          <select id="nom-proy"><option value="">Todos los proyectos</option></select>
+        </div>
+        <div><label>Trabajador (opcional)</label>
+          <select id="nom-trab"><option value="">Todo el personal</option></select>
+        </div>
+      </div>
     </div>
     <button class="btn bp" id="btn-buscar" onclick="buscarPersonal()" style="margin-bottom:12px">Buscar personal de este periodo</button>
 
@@ -677,6 +683,7 @@ function llenarSelects() {
   fill('rf-trab',  unique(todosReg.map(function(r){return r.trabajador;})), 'Todos');
   fill('nom-proy', unique(todosReg.map(function(r){return r.proyecto;})),   'Todos los proyectos');
   fill('pf-proy',  unique(todosReg.map(function(r){return r.proyecto;})),   'Todos');
+  fill('nom-trab', unique(todosReg.map(function(r){return r.trabajador;})), 'Todo el personal');
 }
 
 function toggleRangoFechas() {
@@ -839,8 +846,11 @@ function buscarPersonal() {
   fetch(SHEET_URL + '?t=' + Date.now())
     .then(function(r) { return r.json(); })
     .then(function(raw) {
+      var trabFiltro = document.getElementById('nom-trab').value;
       var rows = parseSheet(raw).filter(function(r) {
-        return r.fecha >= desde && r.fecha <= hasta && (!proy || r.proyecto === proy);
+        return r.fecha >= desde && r.fecha <= hasta
+          && (!proy || r.proyecto === proy)
+          && (!trabFiltro || r.trabajador === trabFiltro);
       });
       btn.textContent = 'Buscar personal de este periodo'; btn.disabled = false;
       if (!rows.length) {
@@ -970,9 +980,12 @@ function renderNomTabla() {
     +'<div class="sc" style="border-top-color:var(--S)"><div class="sv" style="color:var(--S)">' + nomData.length + '</div><div class="sl">Trabajadores</div></div>'
     +'<div class="sc" style="border-top-color:var(--A)"><div class="sv" style="color:var(--A)">' + totalH.toFixed(1) + 'h</div><div class="sl">Horas totales</div></div>';
   tbody.innerHTML = nomData.map(function(t, i) {
+    var cruces = (t.estado !== 'cancelado') ? diasYaPagados(t.trabajador, t.desde, t.hasta) : [];
     var est = t.estado==='cancelado'
       ? '<span class="best ecanc">Pagado</span>'
-      : '<span class="best epend">Pendiente</span>';
+      : (cruces.length > 0
+          ? '<span class="best" style="background:#fde8d0;color:#b35900">Pendiente &#9888;</span>'
+          : '<span class="best epend">Pendiente</span>');
     var acc = t.estado==='cancelado'
       ? '<button class="bic" data-comp="' + i + '">&#129534;</button>'
       : '<button class="bic" style="color:var(--S);font-size:20px" data-pago="' + i + '">&#128179;</button>';
@@ -998,8 +1011,35 @@ function renderNomTabla() {
   });
 }
 
+function diasYaPagados(trabajador, desde, hasta) {
+  // Revisa si el periodo desde-hasta se cruza con algun pago anterior del trabajador
+  var cruces = [];
+  pagosData.forEach(function(p) {
+    if (p.trabajador !== trabajador || p.estado !== 'cancelado') return;
+    // Verificar solapamiento de rangos de fechas
+    if (p.desde <= hasta && p.hasta >= desde) {
+      cruces.push(p);
+    }
+  });
+  return cruces;
+}
+
 function abrirPago(i) {
   var t = nomData[i]; if (!t || t.estado==='cancelado') return;
+  // ALERTA: verificar si ya se pago un periodo que se cruza con este
+  var cruces = diasYaPagados(t.trabajador, t.desde, t.hasta);
+  if (cruces.length > 0) {
+    var detalle = cruces.map(function(c) {
+      return '- Pago ' + c.id + ': periodo ' + c.desde + ' al ' + c.hasta + ' ($' + c.monto.toFixed(2) + ')';
+    }).join('\n');
+    var seguir = confirm('ATENCION - POSIBLE PAGO DUPLICADO\n\n'
+      + 'Ya existe(n) pago(s) a ' + t.trabajador + ' en fechas que se cruzan con este periodo ('
+      + t.desde + ' al ' + t.hasta + '):\n\n'
+      + detalle + '\n\n'
+      + 'Si continua, podria estar pagando dias ya cancelados.\n\n'
+      + 'Desea continuar de todas formas?');
+    if (!seguir) return;
+  }
   document.getElementById('pago-idx').value = i;
   document.getElementById('pago-info').innerHTML =
     '<div style="font-size:16px;font-weight:800;color:var(--P);margin-bottom:10px">' + esc(t.trabajador) + '</div>'
