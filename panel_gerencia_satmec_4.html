@@ -282,6 +282,8 @@ tr:hover td{background:var(--Pl)}
     <div class="sc" style="border-top-color:var(--S)"><div class="sv" id="rs-trab" style="color:var(--S)">0</div><div class="sl">Trabajadores</div></div>
     <div class="sc" style="border-top-color:var(--A)"><div class="sv" id="rs-horas" style="color:var(--A)">0h</div><div class="sl">Horas totales</div></div>
     <div class="sc" style="border-top-color:var(--Pm)"><div class="sv" id="rs-proy" style="color:var(--Pm)">0</div><div class="sl">Proyectos</div></div>
+    <div class="sc" style="border-top-color:var(--S)"><div class="sv" id="rs-pagados" style="color:var(--S)">0</div><div class="sl">Dias pagados</div></div>
+    <div class="sc" style="border-top-color:#b35900"><div class="sv" id="rs-pendientes" style="color:#b35900">0</div><div class="sl">Dias pendientes</div></div>
   </div>
   <div class="card">
     <div class="ct"><span class="ic">&#128269;</span>Filtrar registros</div>
@@ -310,8 +312,8 @@ tr:hover td{background:var(--Pl)}
   <div class="card" style="padding:0;overflow:hidden">
     <div class="tw">
       <table>
-        <thead><tr><th>Fecha</th><th>Trabajador</th><th>Cargo</th><th>Proyecto</th><th>Supervisor</th><th>Sector</th><th>Entrada</th><th>Salida</th><th>Almuerzo</th><th>Horas</th><th>Tipo</th></tr></thead>
-        <tbody id="reg-tbody"><tr><td colspan="11" class="ltxt"><span class="spinner"></span> Cargando...</td></tr></tbody>
+        <thead><tr><th>Fecha</th><th>Trabajador</th><th>Cargo</th><th>Proyecto</th><th>Supervisor</th><th>Sector</th><th>Entrada</th><th>Salida</th><th>Almuerzo</th><th>Horas</th><th>Tipo</th><th>Pago</th></tr></thead>
+        <tbody id="reg-tbody"><tr><td colspan="12" class="ltxt"><span class="spinner"></span> Cargando...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -723,9 +725,17 @@ function aplicarFiltros() {
   renderCharts();
 }
 
+function diaEstaPagado(trabajador, fecha) {
+  return pagosData.some(function(p) {
+    return p.trabajador === trabajador
+      && p.estado === 'cancelado'
+      && p.desde <= fecha && p.hasta >= fecha;
+  });
+}
+
 function renderTablaReg() {
   var tbody = document.getElementById('reg-tbody');
-  if (!filtReg.length) { tbody.innerHTML = '<tr><td colspan="11" class="ltxt">Sin registros para el filtro</td></tr>'; return; }
+  if (!filtReg.length) { tbody.innerHTML = '<tr><td colspan="12" class="ltxt">Sin registros para el filtro</td></tr>'; return; }
   tbody.innerHTML = filtReg.map(function(r) {
     var alm = (r.alm_ini && r.alm_fin) ? r.alm_ini + '-' + r.alm_fin : '-';
     var tipo = r.tipo === 'temporal'
@@ -743,6 +753,9 @@ function renderTablaReg() {
       + '<td style="font-size:11px;color:var(--W)">' + alm + '</td>'
       + '<td><strong style="color:var(--S)">' + r.horas_efectivas + 'h</strong></td>'
       + '<td>' + tipo + '</td>'
+      + '<td>' + (diaEstaPagado(r.trabajador, r.fecha)
+          ? '<span style="background:var(--Sb);color:var(--S);padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap">&#10003; Pagado</span>'
+          : '<span style="background:#fde8d0;color:#b35900;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap">Pendiente</span>') + '</td>'
       + '</tr>';
   }).join('');
 }
@@ -751,10 +764,16 @@ function renderStatsReg() {
   var trab = unique(filtReg.map(function(r){return r.trabajador;}));
   var proy = unique(filtReg.map(function(r){return r.proyecto;}));
   var totalH = filtReg.reduce(function(s,r){ return s + r.horas_efectivas; }, 0);
+  var pagados = 0, pendientes = 0;
+  filtReg.forEach(function(r) {
+    if (diaEstaPagado(r.trabajador, r.fecha)) pagados++; else pendientes++;
+  });
   document.getElementById('rs-total').textContent = filtReg.length;
   document.getElementById('rs-trab').textContent  = trab.length;
   document.getElementById('rs-horas').textContent = totalH.toFixed(1) + 'h';
   document.getElementById('rs-proy').textContent  = proy.length;
+  document.getElementById('rs-pagados').textContent = pagados;
+  document.getElementById('rs-pendientes').textContent = pendientes;
 }
 
 function renderCharts() {
