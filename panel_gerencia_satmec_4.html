@@ -211,6 +211,12 @@ tr:hover td{background:var(--Pl)}
   <div class="mhdr"><span class="mtitle">Editar pago</span><button class="mclose" onclick="cm('m-edit-pago')">x</button></div>
   <input type="hidden" id="edit-pago-idx">
   <div id="edit-pago-info" style="background:var(--Pl);border-radius:var(--rs);padding:14px;margin-bottom:14px"></div>
+  <label style="color:var(--D);font-weight:700">Periodo pagado (corregir si es incorrecto)</label>
+  <div class="row2">
+    <div><label style="margin-top:0">Desde</label><input type="date" id="edit-pago-desde"></div>
+    <div><label style="margin-top:0">Hasta</label><input type="date" id="edit-pago-hasta"></div>
+  </div>
+  <p class="hint" style="margin-bottom:4px">Estas fechas definen que dias marca como pagados en Registros.</p>
   <label>Bono adicional</label>
   <div style="display:flex;align-items:center;gap:6px">
     <span style="font-size:15px;font-weight:700;color:var(--g4)">$</span>
@@ -1452,6 +1458,8 @@ function editarPagoActual() {
   var p = pagosData[idx];
   // Llenar el modal de edicion
   document.getElementById('edit-pago-idx').value = idx;
+  document.getElementById('edit-pago-desde').value = p.desde || '';
+  document.getElementById('edit-pago-hasta').value = p.hasta || '';
   document.getElementById('edit-pago-bono').value = p.bono || 0;
   document.getElementById('edit-pago-metodo').value = p.metodo || 'Efectivo';
   document.getElementById('edit-pago-notas').value = p.notas || '';
@@ -1485,8 +1493,16 @@ function guardarEdicionPago() {
   if (!p) return;
   var subtotal = p.montoNormal + p.montoExtra;
   var bono = parseFloat(document.getElementById('edit-pago-bono').value) || 0;
+  var nuevoDesde = document.getElementById('edit-pago-desde').value;
+  var nuevoHasta = document.getElementById('edit-pago-hasta').value;
+  if (nuevoDesde && nuevoHasta && nuevoDesde > nuevoHasta) {
+    showAlert('err','La fecha Desde no puede ser mayor que Hasta','nom');
+    return;
+  }
   p.bono = bono;
   p.monto = subtotal + bono;
+  if (nuevoDesde) p.desde = nuevoDesde;
+  if (nuevoHasta) p.hasta = nuevoHasta;
   p.metodo = document.getElementById('edit-pago-metodo').value;
   p.notas = document.getElementById('edit-pago-notas').value;
   // Si subio nuevo comprobante en la edicion
@@ -1501,7 +1517,8 @@ function guardarEdicionPago() {
   editCompBancoBase64 = ''; editCompBancoTipo = ''; editCompBancoNombre = '';
   cm('m-edit-pago');
   renderPagos();
-  showAlert('ok', 'Pago actualizado correctamente', 'nom');
+  if (typeof renderTablaReg === 'function' && filtReg) { renderTablaReg(); renderStatsReg(); }
+  showAlert('ok', 'Pago actualizado. Periodo: ' + p.desde + ' al ' + p.hasta, 'nom');
   // Mostrar el comprobante actualizado
   setTimeout(function(){ mostrarComp(p); }, 400);
 }
