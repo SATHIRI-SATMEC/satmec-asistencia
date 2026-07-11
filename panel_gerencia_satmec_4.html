@@ -150,10 +150,17 @@ tr:hover td{background:var(--Pl)}
   <div id="pago-info" style="background:var(--Pl);border-radius:var(--rs);padding:14px;margin-bottom:14px;font-size:13px;line-height:1.9"></div>
   <label>Bono adicional (opcional)</label>
   <div style="display:flex;align-items:center;gap:6px">
-    <span style="font-size:15px;font-weight:700;color:var(--g4)">$</span>
+    <span style="font-size:15px;font-weight:700;color:var(--S)">+ $</span>
     <input type="number" id="pago-bono" value="0" min="0" step="0.50" style="text-align:center;flex:1" placeholder="0.00" oninput="actualizarTotalPago()">
   </div>
-  <p class="hint">Si aplica bono de rendimiento, transporte, alimentacion, etc.</p>
+  <p class="hint">Bono de rendimiento, transporte, alimentacion, etc.</p>
+  <label>Descuento (opcional)</label>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span style="font-size:15px;font-weight:700;color:var(--D)">- $</span>
+    <input type="number" id="pago-descuento" value="0" min="0" step="0.50" style="text-align:center;flex:1" placeholder="0.00" oninput="actualizarTotalPago()">
+  </div>
+  <input type="text" id="pago-desc-motivo" placeholder="Motivo del descuento (ej: anticipo, prestamo, falta)" style="margin-top:6px;font-size:13px">
+  <p class="hint">Anticipos, prestamos, multas, faltas, etc.</p>
   <div id="pago-total-final" style="background:linear-gradient(135deg,var(--Sb),#d4f0dd);border-radius:var(--rs);padding:16px;margin-top:12px;text-align:center">
     <div style="font-size:11px;color:var(--g5);text-transform:uppercase;letter-spacing:.6px;font-weight:700">Total a pagar</div>
     <div id="pago-total-val" style="font-size:30px;font-weight:800;color:var(--S);margin-top:4px">$0.00</div>
@@ -204,6 +211,23 @@ tr:hover td{background:var(--Pl)}
 </div>
 </div>
 
+<!-- MODAL EDITAR PERSONAL -->
+<div class="mbk" id="m-edit-pers">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><span class="mtitle">Editar trabajador</span><button class="mclose" onclick="cm('m-edit-pers')">x</button></div>
+  <input type="hidden" id="ep-pers-idx">
+  <label>Nombre completo</label>
+  <input type="text" id="ep-pers-nom">
+  <label>Cargo</label>
+  <select id="ep-pers-cargo"></select>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn bo" onclick="cm('m-edit-pers')" style="flex:1">Cancelar</button>
+    <button class="btn bs" onclick="guardarEdicionPersonal()" style="flex:2">Guardar cambios</button>
+  </div>
+</div>
+</div>
+
 <!-- MODAL EDITAR PAGO -->
 <div class="mbk" id="m-edit-pago">
 <div class="modal">
@@ -219,9 +243,15 @@ tr:hover td{background:var(--Pl)}
   <p class="hint" style="margin-bottom:4px">Estas fechas definen que dias marca como pagados en Registros.</p>
   <label>Bono adicional</label>
   <div style="display:flex;align-items:center;gap:6px">
-    <span style="font-size:15px;font-weight:700;color:var(--g4)">$</span>
+    <span style="font-size:15px;font-weight:700;color:var(--S)">+ $</span>
     <input type="number" id="edit-pago-bono" value="0" min="0" step="0.50" style="text-align:center;flex:1" oninput="actualizarEditTotal()">
   </div>
+  <label>Descuento</label>
+  <div style="display:flex;align-items:center;gap:6px">
+    <span style="font-size:15px;font-weight:700;color:var(--D)">- $</span>
+    <input type="number" id="edit-pago-descuento" value="0" min="0" step="0.50" style="text-align:center;flex:1" oninput="actualizarEditTotal()">
+  </div>
+  <input type="text" id="edit-pago-desc-motivo" placeholder="Motivo del descuento" style="margin-top:6px;font-size:13px">
   <div style="background:linear-gradient(135deg,var(--Sb),#d4f0dd);border-radius:var(--rs);padding:14px;margin-top:12px;text-align:center">
     <div style="font-size:11px;color:var(--g5);text-transform:uppercase;letter-spacing:.6px;font-weight:700">Total a pagar</div>
     <div id="edit-pago-total" style="font-size:26px;font-weight:800;color:var(--S);margin-top:4px">$0.00</div>
@@ -437,6 +467,26 @@ tr:hover td{background:var(--Pl)}
 
 </div>
 
+<!-- PERSONAL -->
+<div id="view-personal" class="view">
+  <div class="alert aok" id="alert-pers-ok"></div>
+  <div class="alert aerr" id="alert-pers-err"></div>
+  <div class="card" style="border-left:4px solid var(--S)">
+    <div class="ct"><span class="ic">&#128101;</span>Administrar personal</div>
+    <p style="font-size:13px;color:var(--g4);margin-bottom:14px;line-height:1.6">El personal que agregue aqui aparecera en la app del supervisor. Corrija o elimine nombres mal escritos.</p>
+    <label>Nombre completo</label>
+    <input type="text" id="pers-nom" placeholder="Ej: Gabriel Rodriguez">
+    <label>Cargo</label>
+    <select id="pers-cargo"></select>
+    <button class="btn bp" style="margin-top:14px" onclick="agregarPersonal()">+ Agregar trabajador</button>
+  </div>
+  <div class="card">
+    <div class="ct"><span class="ic">&#128203;</span>Lista de personal (<span id="pers-count">0</span>)</div>
+    <div id="pers-list"></div>
+    <button class="btn bo" style="margin-top:12px;font-size:13px" onclick="cargarPersonalSheets()">Actualizar lista</button>
+  </div>
+</div>
+
 <div class="bnav">
   <button class="ni active" id="nav-reg" onclick="switchView('reg',this)">
     <div class="ni-icon">&#128203;</div><span class="ni-lbl">Registros</span>
@@ -446,6 +496,9 @@ tr:hover td{background:var(--Pl)}
   </button>
   <button class="ni" id="nav-proy" onclick="switchView('proy',this)">
     <div class="ni-icon">&#127959;</div><span class="ni-lbl">Proyectos</span>
+  </button>
+  <button class="ni" id="nav-personal" onclick="switchView('personal',this)">
+    <div class="ni-icon">&#128101;</div><span class="ni-lbl">Personal</span>
   </button>
 </div>
 
@@ -470,15 +523,21 @@ var CARGOS_DEF = [
   {cargo:'Residente',     valorDia:45}
 ];
 
+var personalData = [];
+var CARGOS_LISTA = ['Maestro Mayor','Albanil','Ayudante','Electricista','Soldador','Plomero','Pintor','Operador','Chofer','Bodeguero','Supervisor','Residente','Encargado','Obrero'];
+
 window.addEventListener('DOMContentLoaded', function() {
   cargos    = JSON.parse(localStorage.getItem('satmec_cargos') || 'null') || CARGOS_DEF.slice();
   pagosData = JSON.parse(localStorage.getItem('satmec_pagos')  || '[]');
+  personalData = JSON.parse(localStorage.getItem('satmec_personal') || '[]');
+  llenarCargosPersonal();
   var hoy   = new Date();
   document.getElementById('nom-desde').value = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
   document.getElementById('nom-hasta').value  = hoy.toISOString().split('T')[0];
   renderCargos();
   cargarRegistros();
   cargarPagosSheets();
+  cargarPersonalSheets();
   document.querySelectorAll('.mbk').forEach(function(el) {
     el.addEventListener('click', function(e) { if (e.target === el) cm(el.id); });
   });
@@ -1080,6 +1139,8 @@ function abrirPago(i) {
     + '<div style="font-size:11px;color:var(--g4);text-align:center;margin-top:4px">+ Bono (si aplica) se suma al confirmar</div>';
   document.getElementById('pago-notas').value = '';
   document.getElementById('pago-bono').value = '0';
+  document.getElementById('pago-descuento').value = '0';
+  document.getElementById('pago-desc-motivo').value = '';
   document.getElementById('comp-banco-box').style.display = 'none';
   compBancoBase64 = '';
   document.getElementById('comp-banco-preview').style.display = 'none';
@@ -1092,10 +1153,12 @@ function actualizarTotalPago() {
   var t = nomData[i];
   if (!t) return;
   var bono = parseFloat(document.getElementById('pago-bono').value) || 0;
-  var total = t.subtotal + bono;
+  var descuento = parseFloat(document.getElementById('pago-descuento').value) || 0;
+  var total = t.subtotal + bono - descuento;
   document.getElementById('pago-total-val').textContent = '$' + total.toFixed(2);
   var desglose = 'Subtotal: $' + t.subtotal.toFixed(2);
   if (bono > 0) desglose += ' + Bono: $' + bono.toFixed(2);
+  if (descuento > 0) desglose += ' - Descuento: $' + descuento.toFixed(2);
   document.getElementById('pago-total-desglose').textContent = desglose;
 }
 
@@ -1116,13 +1179,15 @@ function confirmarPago() {
   var i = parseInt(document.getElementById('pago-idx').value);
   var t = nomData[i]; if (!t) return;
   var bono = parseFloat(document.getElementById('pago-bono').value) || 0;
-  var totalConBono = t.subtotal + bono;
+  var descuento = parseFloat(document.getElementById('pago-descuento').value) || 0;
+  var descMotivo = document.getElementById('pago-desc-motivo').value;
+  var totalConBono = t.subtotal + bono - descuento;
   var compBanco = compBancoBase64 || '';
   var pago = {
     id:generarIdPago(t.trabajador), trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
     desde:t.desde, hasta:t.hasta, dias:t.dias,
     hn:t.hn, he:t.he, recargo:t.recargo, montoNormal:t.montoNormal, montoExtra:t.montoExtra,
-    bono:bono, monto:totalConBono, valorDia:t.valorDia,
+    bono:bono, descuento:descuento, descMotivo:descMotivo, monto:totalConBono, valorDia:t.valorDia,
     metodo:document.getElementById('pago-metodo').value,
     notas:document.getElementById('pago-notas').value,
     compBanco:compBanco, compBancoTipo:compBancoTipo, compBancoNombre:compBancoNombre,
@@ -1155,7 +1220,7 @@ function pagarTodos() {
         id:generarIdPago(t.trabajador), trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
         desde:t.desde, hasta:t.hasta, dias:t.dias,
         hn:t.hn, he:t.he, recargo:t.recargo, montoNormal:t.montoNormal, montoExtra:t.montoExtra,
-        monto:t.subtotal, valorDia:t.valorDia,
+        bono:0, descuento:0, descMotivo:'', monto:t.subtotal, valorDia:t.valorDia,
         metodo:'Efectivo', notas:'Pago grupal',
         fecha_pago:new Date().toISOString().split('T')[0],
         hora_pago:new Date().toLocaleTimeString(),
@@ -1205,9 +1270,10 @@ function mostrarComp(pago) {
     +'<div class="comp-row"><span>Fecha de pago</span><strong>' + pago.fecha_pago + ' ' + pago.hora_pago + '</strong></div>'
     +(pago.notas?'<div class="comp-row"><span>Notas</span><strong>'+esc(pago.notas)+'</strong></div>':'')
     +(pago.bono > 0 ? '<div class="comp-row"><span>Bono adicional</span><strong style="color:var(--S)">+ $' + pago.bono.toFixed(2) + '</strong></div>' : '')
+    +(pago.descuento > 0 ? '<div class="comp-row"><span>Descuento' + (pago.descMotivo ? ' (' + esc(pago.descMotivo) + ')' : '') + '</span><strong style="color:var(--D)">- $' + pago.descuento.toFixed(2) + '</strong></div>' : '')
     +'<div class="comp-total">'
     +'<div class="comp-total-val">$' + pago.monto.toFixed(2) + '</div>'
-    +'<div class="comp-total-lbl">TOTAL PAGADO' + (pago.bono > 0 ? ' (incluye bono)' : '') + '</div>'
+    +'<div class="comp-total-lbl">TOTAL PAGADO' + (pago.descuento > 0 ? ' (con descuento)' : (pago.bono > 0 ? ' (incluye bono)' : '')) + '</div>'
     +'<div class="comp-est">CANCELADO</div>'
     +'</div>'
     +(pago.compBanco
@@ -1461,6 +1527,8 @@ function editarPagoActual() {
   document.getElementById('edit-pago-desde').value = p.desde || '';
   document.getElementById('edit-pago-hasta').value = p.hasta || '';
   document.getElementById('edit-pago-bono').value = p.bono || 0;
+  document.getElementById('edit-pago-descuento').value = p.descuento || 0;
+  document.getElementById('edit-pago-desc-motivo').value = p.descMotivo || '';
   document.getElementById('edit-pago-metodo').value = p.metodo || 'Efectivo';
   document.getElementById('edit-pago-notas').value = p.notas || '';
   document.getElementById('edit-pago-info').innerHTML =
@@ -1484,7 +1552,8 @@ function actualizarEditTotal() {
   if (!p) return;
   var subtotal = p.montoNormal + p.montoExtra;
   var bono = parseFloat(document.getElementById('edit-pago-bono').value) || 0;
-  document.getElementById('edit-pago-total').textContent = '$' + (subtotal + bono).toFixed(2);
+  var descuento = parseFloat(document.getElementById('edit-pago-descuento').value) || 0;
+  document.getElementById('edit-pago-total').textContent = '$' + (subtotal + bono - descuento).toFixed(2);
 }
 
 function guardarEdicionPago() {
@@ -1499,8 +1568,11 @@ function guardarEdicionPago() {
     showAlert('err','La fecha Desde no puede ser mayor que Hasta','nom');
     return;
   }
+  var descuento = parseFloat(document.getElementById('edit-pago-descuento').value) || 0;
   p.bono = bono;
-  p.monto = subtotal + bono;
+  p.descuento = descuento;
+  p.descMotivo = document.getElementById('edit-pago-desc-motivo').value;
+  p.monto = subtotal + bono - descuento;
   if (nuevoDesde) p.desde = nuevoDesde;
   if (nuevoHasta) p.hasta = nuevoHasta;
   p.metodo = document.getElementById('edit-pago-metodo').value;
@@ -1587,6 +1659,7 @@ function renderPagos() {
       +'Periodo: ' + p.desde + ' a ' + p.hasta + ' - ' + p.dias + ' dias'
       +(p.he>0?' (extra +'+((p.recargo===undefined||p.recargo===null)?50:p.recargo)+'%)':'')
       +(p.bono>0?' | Bono: $'+p.bono.toFixed(2):'')
+      +(p.descuento>0?' | Descuento: $'+p.descuento.toFixed(2)+(p.descMotivo?' ('+esc(p.descMotivo)+')':''):'')
       +(p.proyecto ? '<br>Proyecto: ' + esc(p.proyecto) : '')
       +(p.notas    ? '<br>Notas: '    + esc(p.notas)    : '')
       +(p.compBanco ? '<br><span style="color:var(--S);font-weight:700">Comprobante de transferencia adjunto</span>' : '')
@@ -1671,6 +1744,117 @@ function exportNomCSV() {
 }
 
 // UI
+// ===== MODULO PERSONAL =====
+function llenarCargosPersonal() {
+  var opts = '<option value="">-- Seleccionar cargo --</option>'
+    + CARGOS_LISTA.map(function(c){ return '<option value="' + c + '">' + c + '</option>'; }).join('');
+  ['pers-cargo','ep-pers-cargo'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function normNombre(s) {
+  return (s||'').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+}
+
+function cargarPersonalSheets() {
+  fetch(SHEET_URL + '?hoja=personal&t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(raw){
+      if (!Array.isArray(raw) || raw.length < 2) { renderPersonal(); return; }
+      personalData = raw.slice(1).filter(function(r){ return r[0]; }).map(function(r){
+        return { nombre: r[0] || '', cargo: r[1] || '' };
+      });
+      localStorage.setItem('satmec_personal', JSON.stringify(personalData));
+      renderPersonal();
+    })
+    .catch(function(){ renderPersonal(); });
+}
+
+function guardarPersonalSheets() {
+  // Reemplaza toda la lista en Sheets
+  fetch(SHEET_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ _tipo:'personal', lista: personalData })});
+}
+
+function agregarPersonal() {
+  var nom = document.getElementById('pers-nom').value.trim();
+  var cargo = document.getElementById('pers-cargo').value;
+  if (!nom) { showAlert('err','Ingrese el nombre','pers'); return; }
+  if (!cargo) { showAlert('err','Seleccione el cargo','pers'); return; }
+  var existe = personalData.find(function(p){ return normNombre(p.nombre) === normNombre(nom); });
+  if (existe) { showAlert('err','Ya existe: ' + existe.nombre,'pers'); return; }
+  personalData.push({ nombre: nom, cargo: cargo });
+  personalData.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+  localStorage.setItem('satmec_personal', JSON.stringify(personalData));
+  guardarPersonalSheets();
+  document.getElementById('pers-nom').value = '';
+  document.getElementById('pers-cargo').value = '';
+  renderPersonal();
+  showAlert('ok','Trabajador agregado: ' + nom,'pers');
+}
+
+function renderPersonal() {
+  var c = document.getElementById('pers-list');
+  document.getElementById('pers-count').textContent = personalData.length;
+  if (!personalData.length) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">&#128101;</div><p>Sin personal registrado.</p></div>';
+    return;
+  }
+  c.innerHTML = personalData.map(function(p, i) {
+    var ini = p.nombre.split(' ').map(function(x){return x[0];}).join('').slice(0,2).toUpperCase();
+    return '<div class="pi">'
+      + '<div class="pi-av">' + ini + '</div>'
+      + '<div class="pi-info"><div class="pi-name">' + esc(p.nombre) + '</div><div class="pi-meta">' + esc(p.cargo) + '</div></div>'
+      + '<button class="bic" data-edit-pers="' + i + '">&#9999;&#65039;</button>'
+      + '<button class="bic" style="color:var(--D)" data-del-pers="' + i + '">&#128465;</button>'
+      + '</div>';
+  }).join('');
+  c.querySelectorAll('[data-edit-pers]').forEach(function(btn){
+    btn.addEventListener('click', function(){ editarPersonal(parseInt(this.dataset.editPers)); });
+  });
+  c.querySelectorAll('[data-del-pers]').forEach(function(btn){
+    btn.addEventListener('click', function(){ eliminarPersonal(parseInt(this.dataset.delPers)); });
+  });
+}
+
+function editarPersonal(i) {
+  var p = personalData[i]; if (!p) return;
+  document.getElementById('ep-pers-idx').value = i;
+  document.getElementById('ep-pers-nom').value = p.nombre;
+  document.getElementById('ep-pers-cargo').value = p.cargo;
+  om('m-edit-pers');
+}
+
+function guardarEdicionPersonal() {
+  var i = parseInt(document.getElementById('ep-pers-idx').value);
+  var nom = document.getElementById('ep-pers-nom').value.trim();
+  var cargo = document.getElementById('ep-pers-cargo').value;
+  if (!nom) { showAlert('err','Ingrese el nombre','pers'); return; }
+  var dup = personalData.find(function(p, idx){ return idx !== i && normNombre(p.nombre) === normNombre(nom); });
+  if (dup) { showAlert('err','Ya existe otro con ese nombre','pers'); return; }
+  personalData[i] = { nombre: nom, cargo: cargo };
+  personalData.sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+  localStorage.setItem('satmec_personal', JSON.stringify(personalData));
+  guardarPersonalSheets();
+  cm('m-edit-pers');
+  renderPersonal();
+  showAlert('ok','Trabajador actualizado','pers');
+}
+
+function eliminarPersonal(i) {
+  var p = personalData[i]; if (!p) return;
+  confirm2('Eliminar a "' + esc(p.nombre) + '" de la lista de personal?', function() {
+    personalData.splice(i, 1);
+    localStorage.setItem('satmec_personal', JSON.stringify(personalData));
+    guardarPersonalSheets();
+    cm('m-confirm');
+    renderPersonal();
+    showAlert('ok','Trabajador eliminado','pers');
+  });
+}
+
 function switchView(v, btn) {
   document.querySelectorAll('.view').forEach(function(el){ el.classList.remove('active'); });
   document.querySelectorAll('.ni').forEach(function(b){ b.classList.remove('active'); });
@@ -1679,6 +1863,7 @@ function switchView(v, btn) {
   document.getElementById('scroll').scrollTop = 0;
   if (v==='reg')  cargarRegistros();
   if (v==='proy') renderProyectos();
+  if (v==='personal') { renderPersonal(); cargarPersonalSheets(); }
 }
 
 function sTabNom(t, el) {
