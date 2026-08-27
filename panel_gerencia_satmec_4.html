@@ -1641,7 +1641,7 @@ async function descargarPDFCompleto() {
   btn.textContent = txtOrig; btn.disabled = false;
 }
 
-function descargarBytes(bytes, nombre) {
+async function descargarBytes(bytes, nombre) {
   var blob = new Blob([bytes], {type:'application/pdf'});
   // Si el navegador soporta elegir carpeta (Chrome/Edge), preguntar donde guardar
   if (window.showSaveFilePicker) {
