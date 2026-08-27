@@ -122,6 +122,8 @@ tr:hover td{background:var(--Pl)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ltxt{font-size:13px;color:var(--g4);text-align:center;padding:20px;display:flex;align-items:center;justify-content:center;gap:8px}
 .hint{font-size:12px;color:var(--g4);margin-top:6px;line-height:1.5}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--g6);cursor:pointer;font-weight:500}
+.chk input{width:16px;height:16px;cursor:pointer}
 .arow{display:flex;gap:8px;margin-top:10px}
 .arow .btn{flex:1}
 .comp-banco-section{margin-top:16px;padding:14px;background:var(--Pl);border-radius:var(--rs);text-align:center}
@@ -208,13 +210,41 @@ tr:hover td{background:var(--Pl)}
 <div class="modal">
   <div class="mhandle"></div>
   <div class="mhdr"><span class="mtitle">Generar informe</span><button class="mclose" onclick="cm('m-informe')">x</button></div>
-  <p style="font-size:13px;color:var(--g4);margin-bottom:14px;line-height:1.6">El informe usa los filtros que tiene aplicados arriba (periodo, proyecto, supervisor, trabajador). Elija el tipo de informe:</p>
+  <p style="font-size:13px;color:var(--g4);margin-bottom:14px;line-height:1.6">El informe usa los filtros aplicados arriba. Personalice que incluir:</p>
   <label>Tipo de informe</label>
   <select id="inf-tipo">
     <option value="detalle">Detalle: todos los registros dia por dia</option>
     <option value="resumen">Resumen: total de dias y horas por trabajador</option>
     <option value="ambos">Completo: resumen + detalle</option>
   </select>
+
+  <label style="margin-top:14px">Columnas a mostrar en el detalle</label>
+  <div style="background:var(--g1);border-radius:var(--rs);padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <label class="chk"><input type="checkbox" id="col-fecha" checked> Fecha</label>
+    <label class="chk"><input type="checkbox" id="col-trab" checked> Trabajador</label>
+    <label class="chk"><input type="checkbox" id="col-cargo" checked> Cargo</label>
+    <label class="chk"><input type="checkbox" id="col-proy" checked> Proyecto</label>
+    <label class="chk"><input type="checkbox" id="col-sup"> Supervisor</label>
+    <label class="chk"><input type="checkbox" id="col-sector"> Sector</label>
+    <label class="chk"><input type="checkbox" id="col-entrada" checked> Entrada</label>
+    <label class="chk"><input type="checkbox" id="col-salida" checked> Salida</label>
+    <label class="chk"><input type="checkbox" id="col-almuerzo" checked> Almuerzo</label>
+    <label class="chk"><input type="checkbox" id="col-horas" checked> Horas</label>
+    <label class="chk"><input type="checkbox" id="col-tipo"> Tipo</label>
+    <label class="chk"><input type="checkbox" id="col-obs" checked> Observaciones</label>
+  </div>
+
+  <label style="margin-top:14px">Firmas al final del informe</label>
+  <div style="background:var(--g1);border-radius:var(--rs);padding:12px">
+    <label class="chk" style="margin-bottom:8px"><input type="checkbox" id="inf-firmas" checked onchange="toggleFirmasConfig()"> Incluir espacios para firmar</label>
+    <div id="firmas-config">
+      <input type="text" id="firma1" placeholder="Firma 1 (ej: Elaborado por)" value="Elaborado por" style="font-size:13px;margin-bottom:6px">
+      <input type="text" id="firma2" placeholder="Firma 2 (ej: Revisado por)" value="Revisado por" style="font-size:13px;margin-bottom:6px">
+      <input type="text" id="firma3" placeholder="Firma 3 (ej: Aprobado por)" value="Aprobado por" style="font-size:13px">
+      <p class="hint" style="margin-top:6px">Deje vacio el que no necesite</p>
+    </div>
+  </div>
+
   <div style="background:var(--Pl);border-radius:var(--rs);padding:12px;margin-top:14px">
     <div style="font-size:12px;color:var(--g5);line-height:1.7" id="inf-preview">Cargando resumen...</div>
   </div>
@@ -864,6 +894,11 @@ function renderCharts() {
   barChart('chart-dias', dh14, 'var(--Pm)');
 }
 
+function toggleFirmasConfig() {
+  var on = document.getElementById('inf-firmas').checked;
+  document.getElementById('firmas-config').style.display = on ? 'block' : 'none';
+}
+
 function abrirInformeConfig() {
   if (!filtReg || !filtReg.length) {
     showAlert('err','No hay registros. Aplique filtros primero.','reg');
@@ -931,8 +966,10 @@ function generarInforme() {
   h += '.rsm-card .nom{font-size:14px;font-weight:bold;color:#0D2B5E}';
   h += '.rsm-card .det{font-size:12px;color:#4a5268;margin-top:4px}';
   h += '.rsm-card .big{font-size:16px;font-weight:bold;color:#1a7a3a}';
-  h += '.firmas{display:flex;gap:40px;margin-top:50px;page-break-inside:avoid}';
-  h += '.firma{flex:1;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}';
+  h += '.firmas{display:flex;gap:40px;margin-top:70px;page-break-inside:avoid;justify-content:space-around}';
+  h += '.firma-box{flex:1;text-align:center;max-width:220px}';
+  h += '.firma-linea{border-top:1.5px solid #333;margin-bottom:6px}';
+  h += '.firma-lbl{font-size:12px;color:#333;font-weight:bold}';
   h += '.pie{margin-top:30px;text-align:center;font-size:10px;color:#8C94A6}';
   h += '@media print{body{padding:0}.noprint{display:none}@page{margin:1.2cm}}';
   h += '.btn-print{background:#1a7a3a;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;margin:0 6px}';
@@ -981,33 +1018,70 @@ function generarInforme() {
 
   // ==== DETALLE ====
   if (tipo === 'detalle' || tipo === 'ambos') {
+    // Leer que columnas quiere el usuario
+    var cols = [];
+    if (document.getElementById('col-fecha').checked)    cols.push({k:'fecha',    t:'Fecha'});
+    if (document.getElementById('col-trab').checked)     cols.push({k:'trab',     t:'Trabajador'});
+    if (document.getElementById('col-cargo').checked)    cols.push({k:'cargo',    t:'Cargo'});
+    if (document.getElementById('col-proy').checked)     cols.push({k:'proy',     t:'Proyecto'});
+    if (document.getElementById('col-sup').checked)      cols.push({k:'sup',      t:'Supervisor'});
+    if (document.getElementById('col-sector').checked)   cols.push({k:'sector',   t:'Sector'});
+    if (document.getElementById('col-entrada').checked)  cols.push({k:'entrada',  t:'Entrada'});
+    if (document.getElementById('col-salida').checked)   cols.push({k:'salida',   t:'Salida'});
+    if (document.getElementById('col-almuerzo').checked) cols.push({k:'almuerzo', t:'Almuerzo'});
+    if (document.getElementById('col-horas').checked)    cols.push({k:'horas',    t:'Horas'});
+    if (document.getElementById('col-tipo').checked)     cols.push({k:'tipo',     t:'Tipo'});
+    if (document.getElementById('col-obs').checked)      cols.push({k:'obs',      t:'Observaciones'});
+
     h += '<div class="secc">Detalle de registros</div>';
     h += '<table><thead><tr>';
-    h += '<th>Fecha</th><th>Trabajador</th><th>Cargo</th><th>Proyecto</th><th>Entrada</th><th>Salida</th><th>Almuerzo</th><th>Horas</th>';
+    cols.forEach(function(c){ h += '<th>' + c.t + '</th>'; });
     h += '</tr></thead><tbody>';
     registros.forEach(function(r) {
       var alm = (r.alm_ini && r.alm_fin) ? (r.alm_ini + '-' + r.alm_fin) : '-';
+      var val = {
+        fecha: esc(r.fecha),
+        trab: '<b>' + esc(r.trabajador) + '</b>',
+        cargo: esc(r.cargo),
+        proy: esc(r.proyecto),
+        sup: esc(r.supervisor),
+        sector: esc(r.sector) || '-',
+        entrada: r.entrada || '-',
+        salida: r.salida || '-',
+        almuerzo: alm,
+        horas: '<b>' + r.horas_efectivas + 'h</b>',
+        tipo: (r.tipo === 'temporal' ? 'Temporal' : 'Planta'),
+        obs: esc(r.observaciones) || '-'
+      };
       h += '<tr>';
-      h += '<td>' + esc(r.fecha) + '</td>';
-      h += '<td><b>' + esc(r.trabajador) + '</b></td>';
-      h += '<td>' + esc(r.cargo) + '</td>';
-      h += '<td>' + esc(r.proyecto) + '</td>';
-      h += '<td>' + (r.entrada||'-') + '</td>';
-      h += '<td>' + (r.salida||'-') + '</td>';
-      h += '<td>' + alm + '</td>';
-      h += '<td><b>' + r.horas_efectivas + 'h</b></td>';
+      cols.forEach(function(c){ h += '<td>' + val[c.k] + '</td>'; });
       h += '</tr>';
     });
-    h += '<tr class="tot-row"><td colspan="7">TOTAL HORAS</td><td>' + totalH.toFixed(2) + 'h</td></tr>';
+    // Fila de total (colspan hasta la columna de horas)
+    var idxHoras = cols.map(function(c){return c.k;}).indexOf('horas');
+    if (idxHoras > -1) {
+      h += '<tr class="tot-row"><td colspan="' + idxHoras + '">TOTAL HORAS</td><td colspan="' + (cols.length - idxHoras) + '">' + totalH.toFixed(2) + 'h</td></tr>';
+    } else {
+      h += '<tr class="tot-row"><td colspan="' + cols.length + '">TOTAL: ' + totalH.toFixed(2) + 'h</td></tr>';
+    }
     h += '</tbody></table>';
   }
 
-  // Firmas
-  h += '<div class="firmas">';
-  h += '<div class="firma">Elaborado por</div>';
-  h += '<div class="firma">Revisado por</div>';
-  h += '<div class="firma">Aprobado por</div>';
-  h += '</div>';
+  // Firmas (personalizadas)
+  if (document.getElementById('inf-firmas').checked) {
+    var firmas = [
+      document.getElementById('firma1').value.trim(),
+      document.getElementById('firma2').value.trim(),
+      document.getElementById('firma3').value.trim()
+    ].filter(function(f){ return f; });
+    if (firmas.length) {
+      h += '<div class="firmas">';
+      firmas.forEach(function(f){
+        h += '<div class="firma-box"><div class="firma-linea"></div><div class="firma-lbl">' + esc(f) + '</div></div>';
+      });
+      h += '</div>';
+    }
+  }
 
   h += '<div class="pie">SATMEC - Proyectos Industriales &nbsp;|&nbsp; Informe generado el ' + fechaHoy + '</div>';
   h += '</body></html>';
