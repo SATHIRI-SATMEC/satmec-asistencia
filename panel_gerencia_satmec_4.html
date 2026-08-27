@@ -173,19 +173,11 @@ tr:hover td{background:var(--Pl)}
     <option value="Cheque">Cheque</option>
   </select>
   <div id="comp-banco-box" style="display:none;margin-top:12px;padding:14px;background:var(--Pl);border-radius:var(--rs);border:2px dashed var(--P)">
-    <label style="margin-top:0;color:var(--P);font-weight:700">Adjuntar comprobante de transferencia</label>
-    <p class="hint" style="margin-bottom:10px">Suba foto o captura del comprobante del banco</p>
-    <input type="file" id="comp-banco-file" accept="image/*,application/pdf" style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
-    <p class="hint" style="margin-top:6px">Acepta imagen (foto/captura) o PDF</p>
-    <div id="comp-banco-preview" style="display:none;margin-top:10px;text-align:center">
-      <img id="comp-banco-img" style="max-width:100%;max-height:300px;border-radius:var(--rsm);box-shadow:var(--sh);display:none">
-      <div id="comp-banco-pdf" style="display:none;padding:16px;background:var(--white);border-radius:var(--rsm);box-shadow:var(--sh)">
-        <div style="font-size:32px">&#128196;</div>
-        <div id="comp-banco-pdf-name" style="font-size:12px;color:var(--P);font-weight:700;margin-top:6px;word-break:break-all"></div>
-        <div style="font-size:11px;color:var(--g4);margin-top:2px">PDF adjuntado</div>
-      </div>
-      <button class="btn bo bsm" style="margin-top:8px;font-size:11px" onclick="quitarCompBanco()">Quitar archivo</button>
-    </div>
+    <label style="margin-top:0;color:var(--P);font-weight:700">Adjuntar comprobantes de transferencia</label>
+    <p class="hint" style="margin-bottom:10px">Suba uno o varios comprobantes del banco</p>
+    <input type="file" id="comp-banco-file" accept="image/*,application/pdf" multiple style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
+    <p class="hint" style="margin-top:6px">Puede seleccionar VARIOS archivos (imagenes o PDF). Se agregan a la lista.</p>
+    <div id="comp-banco-lista" style="margin-top:10px"></div>
   </div>
   <label>Notas</label>
   <textarea id="pago-notas" style="min-height:60px" placeholder="Ej: Pago quincena junio, bono por rendimiento..."></textarea>
@@ -208,6 +200,26 @@ tr:hover td{background:var(--Pl)}
     <button class="btn bp" onclick="imprimirComp()" style="flex:1">Imprimir</button>
     <button class="btn" style="flex:1;background:var(--A);color:#fff" onclick="editarPagoActual()">Editar pago</button>
   </div>
+</div>
+</div>
+
+<!-- MODAL CONFIG INFORME -->
+<div class="mbk" id="m-informe">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><span class="mtitle">Generar informe</span><button class="mclose" onclick="cm('m-informe')">x</button></div>
+  <p style="font-size:13px;color:var(--g4);margin-bottom:14px;line-height:1.6">El informe usa los filtros que tiene aplicados arriba (periodo, proyecto, supervisor, trabajador). Elija el tipo de informe:</p>
+  <label>Tipo de informe</label>
+  <select id="inf-tipo">
+    <option value="detalle">Detalle: todos los registros dia por dia</option>
+    <option value="resumen">Resumen: total de dias y horas por trabajador</option>
+    <option value="ambos">Completo: resumen + detalle</option>
+  </select>
+  <div style="background:var(--Pl);border-radius:var(--rs);padding:12px;margin-top:14px">
+    <div style="font-size:12px;color:var(--g5);line-height:1.7" id="inf-preview">Cargando resumen...</div>
+  </div>
+  <button class="btn bs" style="width:100%;margin-top:16px;padding:14px" onclick="generarInforme()">&#128424;&#65039; Ver informe / Imprimir</button>
+  <p class="hint" style="text-align:center;margin-top:8px">Se abre en una ventana nueva lista para imprimir o guardar como PDF</p>
 </div>
 </div>
 
@@ -263,16 +275,11 @@ tr:hover td{background:var(--Pl)}
     <option value="Cheque">Cheque</option>
   </select>
   <div id="edit-comp-banco-box" style="display:none;margin-top:12px;padding:14px;background:var(--Pl);border-radius:var(--rs);border:2px dashed var(--P)">
-    <label style="margin-top:0;color:var(--P);font-weight:700">Cambiar comprobante de transferencia</label>
-    <p class="hint" style="margin-bottom:10px">Suba uno nuevo si desea reemplazarlo (imagen o PDF)</p>
-    <input type="file" id="edit-comp-banco-file" accept="image/*,application/pdf" style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
-    <div id="edit-comp-banco-preview" style="display:none;margin-top:10px;text-align:center">
-      <img id="edit-comp-banco-img" style="max-width:100%;max-height:200px;border-radius:var(--rsm);display:none">
-      <div id="edit-comp-banco-pdf" style="display:none;padding:12px;background:var(--white);border-radius:var(--rsm)">
-        <div style="font-size:28px">&#128196;</div>
-        <div id="edit-comp-banco-pdf-name" style="font-size:11px;color:var(--P);font-weight:700;margin-top:4px"></div>
-      </div>
-    </div>
+    <label style="margin-top:0;color:var(--P);font-weight:700">Comprobantes de transferencia</label>
+    <p class="hint" style="margin-bottom:10px">Agregue o elimine comprobantes (imagen o PDF)</p>
+    <input type="file" id="edit-comp-banco-file" accept="image/*,application/pdf" multiple style="font-size:13px;padding:8px;border:none;background:var(--white);border-radius:var(--rsm);width:100%">
+    <p class="hint" style="margin-top:6px">Puede agregar VARIOS. Los nuevos se suman a los existentes.</p>
+    <div id="edit-comp-banco-lista" style="margin-top:10px"></div>
   </div>
   <label>Notas</label>
   <textarea id="edit-pago-notas" style="min-height:60px"></textarea>
@@ -357,6 +364,7 @@ tr:hover td{background:var(--Pl)}
     <button class="btn bo" onclick="exportarCSV()" style="padding:12px;font-size:13px">Exportar CSV</button>
     <button class="btn bp" onclick="cargarRegistros()" style="padding:12px;font-size:13px">Actualizar</button>
   </div>
+  <button class="btn bs" style="width:100%;margin-top:10px;padding:14px;font-size:14px" onclick="abrirInformeConfig()">&#128196; Generar informe para imprimir</button>
   <div class="card" style="margin-top:12px">
     <div class="ct"><span class="ic">&#128202;</span>Horas por proyecto</div>
     <div id="chart-proy"></div>
@@ -856,6 +864,160 @@ function renderCharts() {
   barChart('chart-dias', dh14, 'var(--Pm)');
 }
 
+function abrirInformeConfig() {
+  if (!filtReg || !filtReg.length) {
+    showAlert('err','No hay registros. Aplique filtros primero.','reg');
+    return;
+  }
+  // Vista previa del alcance del informe
+  var trabajadores = unique(filtReg.map(function(r){ return r.trabajador; }));
+  var fechas = unique(filtReg.map(function(r){ return r.fecha; })).sort();
+  var totalH = filtReg.reduce(function(s,r){ return s + (parseFloat(r.horas_efectivas)||0); }, 0);
+  var rango = fechas.length === 1 ? fechas[0] : (fechas[0] + ' al ' + fechas[fechas.length-1]);
+  var prev = '<strong>' + filtReg.length + '</strong> registros<br>'
+    + '<strong>' + trabajadores.length + '</strong> trabajador(es)<br>'
+    + '<strong>' + totalH.toFixed(2) + '</strong> horas totales<br>'
+    + 'Periodo: <strong>' + rango + '</strong>';
+  document.getElementById('inf-preview').innerHTML = prev;
+  om('m-informe');
+}
+
+function generarInforme() {
+  var tipo = document.getElementById('inf-tipo').value;
+  var registros = filtReg.slice().sort(function(a,b){
+    if (a.fecha !== b.fecha) return a.fecha < b.fecha ? -1 : 1;
+    return a.trabajador < b.trabajador ? -1 : 1;
+  });
+  var fechas = unique(registros.map(function(r){ return r.fecha; })).sort();
+  var rango = fechas.length === 1 ? fechas[0] : (fechas[0] + ' al ' + fechas[fechas.length-1]);
+  var totalH = registros.reduce(function(s,r){ return s + (parseFloat(r.horas_efectivas)||0); }, 0);
+  var trabajadores = unique(registros.map(function(r){ return r.trabajador; }));
+
+  // Filtros aplicados (para mostrar en el encabezado)
+  var fProy = document.getElementById('rf-proy').value || 'Todos';
+  var fSup = document.getElementById('rf-sup').value || 'Todos';
+  var fTrab = document.getElementById('rf-trab').value || 'Todos';
+
+  // ==== Construir resumen por trabajador ====
+  var resumen = {};
+  registros.forEach(function(r) {
+    var t = r.trabajador;
+    if (!resumen[t]) resumen[t] = { cargo: r.cargo, dias: 0, horas: 0, proyectos: {} };
+    resumen[t].dias++;
+    resumen[t].horas += (parseFloat(r.horas_efectivas)||0);
+    if (r.proyecto) resumen[t].proyectos[r.proyecto] = true;
+  });
+
+  var fechaHoy = new Date().toLocaleDateString('es-EC', {day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // ==== HTML del informe ====
+  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Informe Asistencia SATMEC</title>';
+  h += '<style>';
+  h += '*{box-sizing:border-box;margin:0;padding:0}';
+  h += 'body{font-family:Arial,Helvetica,sans-serif;color:#1a1d2e;padding:24px;font-size:12px}';
+  h += '.hdr{display:flex;align-items:center;gap:14px;border-bottom:3px solid #E88F00;padding-bottom:14px;margin-bottom:16px}';
+  h += '.hdr img{height:52px}';
+  h += '.hdr h1{font-size:20px;color:#0D2B5E}';
+  h += '.hdr .sub{font-size:11px;color:#8C94A6}';
+  h += '.meta{background:#f2f5fa;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:6px 28px;font-size:12px}';
+  h += '.meta b{color:#0D2B5E}';
+  h += '.secc{font-size:15px;color:#0D2B5E;font-weight:bold;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #0D2B5E}';
+  h += 'table{width:100%;border-collapse:collapse;margin-bottom:16px}';
+  h += 'th{background:#0D2B5E;color:#fff;padding:8px 6px;text-align:left;font-size:11px}';
+  h += 'td{padding:7px 6px;border-bottom:1px solid #e2e6ee;font-size:11px}';
+  h += 'tr:nth-child(even) td{background:#f7f9fc}';
+  h += '.tot-row td{background:#eaf4ee !important;font-weight:bold;color:#1a7a3a;border-top:2px solid #1a7a3a}';
+  h += '.rsm-card{background:#f7f9fc;border-left:4px solid #0D2B5E;border-radius:6px;padding:12px 14px;margin-bottom:10px}';
+  h += '.rsm-card .nom{font-size:14px;font-weight:bold;color:#0D2B5E}';
+  h += '.rsm-card .det{font-size:12px;color:#4a5268;margin-top:4px}';
+  h += '.rsm-card .big{font-size:16px;font-weight:bold;color:#1a7a3a}';
+  h += '.firmas{display:flex;gap:40px;margin-top:50px;page-break-inside:avoid}';
+  h += '.firma{flex:1;text-align:center;border-top:1px solid #333;padding-top:6px;font-size:11px}';
+  h += '.pie{margin-top:30px;text-align:center;font-size:10px;color:#8C94A6}';
+  h += '@media print{body{padding:0}.noprint{display:none}@page{margin:1.2cm}}';
+  h += '.btn-print{background:#1a7a3a;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;margin:0 6px}';
+  h += '.btn-close{background:#8C94A6;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;margin:0 6px}';
+  h += '</style></head><body>';
+
+  // Barra de botones (no se imprime)
+  h += '<div class="noprint" style="text-align:center;margin-bottom:20px;background:#f2f5fa;padding:14px;border-radius:10px">';
+  h += '<button class="btn-print" onclick="window.print()">Imprimir / Guardar PDF</button>';
+  h += '<button class="btn-close" onclick="window.close()">Cerrar</button>';
+  h += '</div>';
+
+  // Encabezado
+  h += '<div class="hdr"><img src="data:image/jpeg;base64,' + LOGO_B64 + '">';
+  h += '<div><h1>INFORME DE ASISTENCIA</h1><div class="sub">SATMEC - Proyectos Industriales</div></div></div>';
+
+  // Metadatos
+  h += '<div class="meta">';
+  h += '<div>Periodo: <b>' + rango + '</b></div>';
+  h += '<div>Proyecto: <b>' + esc(fProy) + '</b></div>';
+  h += '<div>Supervisor: <b>' + esc(fSup) + '</b></div>';
+  h += '<div>Trabajador: <b>' + esc(fTrab) + '</b></div>';
+  h += '<div>Total registros: <b>' + registros.length + '</b></div>';
+  h += '<div>Total horas: <b>' + totalH.toFixed(2) + 'h</b></div>';
+  h += '<div>Generado: <b>' + fechaHoy + '</b></div>';
+  h += '</div>';
+
+  // ==== RESUMEN ====
+  if (tipo === 'resumen' || tipo === 'ambos') {
+    h += '<div class="secc">Resumen por trabajador</div>';
+    Object.keys(resumen).sort().forEach(function(nom) {
+      var r = resumen[nom];
+      var proys = Object.keys(r.proyectos).join(', ');
+      h += '<div class="rsm-card">';
+      h += '<div class="nom">' + esc(nom) + ' <span style="font-size:11px;color:#8C94A6;font-weight:normal">(' + esc(r.cargo) + ')</span></div>';
+      h += '<div class="det">Dias trabajados: <b>' + r.dias + '</b> &nbsp;|&nbsp; Total horas: <span class="big">' + r.horas.toFixed(2) + 'h</span></div>';
+      if (proys) h += '<div class="det" style="font-size:11px;color:#8C94A6">Proyectos: ' + esc(proys) + '</div>';
+      h += '</div>';
+    });
+    // Total general
+    h += '<div class="rsm-card" style="border-left-color:#1a7a3a;background:#eaf4ee">';
+    h += '<div class="nom" style="color:#1a7a3a">TOTAL GENERAL</div>';
+    h += '<div class="det">' + trabajadores.length + ' trabajador(es) &nbsp;|&nbsp; ' + registros.length + ' dias-registro &nbsp;|&nbsp; <span class="big">' + totalH.toFixed(2) + 'h</span></div>';
+    h += '</div>';
+  }
+
+  // ==== DETALLE ====
+  if (tipo === 'detalle' || tipo === 'ambos') {
+    h += '<div class="secc">Detalle de registros</div>';
+    h += '<table><thead><tr>';
+    h += '<th>Fecha</th><th>Trabajador</th><th>Cargo</th><th>Proyecto</th><th>Entrada</th><th>Salida</th><th>Almuerzo</th><th>Horas</th>';
+    h += '</tr></thead><tbody>';
+    registros.forEach(function(r) {
+      var alm = (r.alm_ini && r.alm_fin) ? (r.alm_ini + '-' + r.alm_fin) : '-';
+      h += '<tr>';
+      h += '<td>' + esc(r.fecha) + '</td>';
+      h += '<td><b>' + esc(r.trabajador) + '</b></td>';
+      h += '<td>' + esc(r.cargo) + '</td>';
+      h += '<td>' + esc(r.proyecto) + '</td>';
+      h += '<td>' + (r.entrada||'-') + '</td>';
+      h += '<td>' + (r.salida||'-') + '</td>';
+      h += '<td>' + alm + '</td>';
+      h += '<td><b>' + r.horas_efectivas + 'h</b></td>';
+      h += '</tr>';
+    });
+    h += '<tr class="tot-row"><td colspan="7">TOTAL HORAS</td><td>' + totalH.toFixed(2) + 'h</td></tr>';
+    h += '</tbody></table>';
+  }
+
+  // Firmas
+  h += '<div class="firmas">';
+  h += '<div class="firma">Elaborado por</div>';
+  h += '<div class="firma">Revisado por</div>';
+  h += '<div class="firma">Aprobado por</div>';
+  h += '</div>';
+
+  h += '<div class="pie">SATMEC - Proyectos Industriales &nbsp;|&nbsp; Informe generado el ' + fechaHoy + '</div>';
+  h += '</body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(h);
+  w.document.close();
+  cm('m-informe');
+}
+
 function exportarCSV() {
   if (!filtReg.length) { alert('Sin registros'); return; }
   var h = ['Fecha','Proyecto','Supervisor','Sector','Trabajador','Cargo','Entrada','Salida','Ini.Alm','Fin.Alm','Horas','Observaciones','Tipo'];
@@ -1142,8 +1304,8 @@ function abrirPago(i) {
   document.getElementById('pago-descuento').value = '0';
   document.getElementById('pago-desc-motivo').value = '';
   document.getElementById('comp-banco-box').style.display = 'none';
-  compBancoBase64 = '';
-  document.getElementById('comp-banco-preview').style.display = 'none';
+  compBancos = [];
+  renderCompLista('comp-banco-lista', compBancos, 'pago');
   actualizarTotalPago();
   om('m-pago');
 }
@@ -1160,6 +1322,16 @@ function actualizarTotalPago() {
   if (bono > 0) desglose += ' + Bono: $' + bono.toFixed(2);
   if (descuento > 0) desglose += ' - Descuento: $' + descuento.toFixed(2);
   document.getElementById('pago-total-desglose').textContent = desglose;
+}
+
+// Devuelve la lista de comprobantes de un pago (compatible con formato viejo de 1 solo)
+function compsDePago(pago) {
+  if (!pago) return [];
+  if (Array.isArray(pago.compBancos) && pago.compBancos.length) return pago.compBancos;
+  if (pago.compBanco) {
+    return [{ data: pago.compBanco, tipo: pago.compBancoTipo || 'imagen', nombre: pago.compBancoNombre || 'comprobante' }];
+  }
+  return [];
 }
 
 function generarIdPago(nombre) {
@@ -1182,7 +1354,7 @@ function confirmarPago() {
   var descuento = parseFloat(document.getElementById('pago-descuento').value) || 0;
   var descMotivo = document.getElementById('pago-desc-motivo').value;
   var totalConBono = t.subtotal + bono - descuento;
-  var compBanco = compBancoBase64 || '';
+  var listaComp = compBancos.slice();
   var pago = {
     id:generarIdPago(t.trabajador), trabajador:t.trabajador, cargo:t.cargo, proyecto:t.proyecto,
     desde:t.desde, hasta:t.hasta, dias:t.dias,
@@ -1190,15 +1362,15 @@ function confirmarPago() {
     bono:bono, descuento:descuento, descMotivo:descMotivo, monto:totalConBono, valorDia:t.valorDia,
     metodo:document.getElementById('pago-metodo').value,
     notas:document.getElementById('pago-notas').value,
-    compBanco:compBanco, compBancoTipo:compBancoTipo, compBancoNombre:compBancoNombre,
+    compBancos:listaComp,
     fecha_pago:new Date().toISOString().split('T')[0],
     hora_pago:new Date().toLocaleTimeString(),
     estado:'cancelado'
   };
   // Limpiar comprobante bancario para el siguiente pago
-  compBancoBase64 = ''; compBancoTipo = ''; compBancoNombre = '';
+  compBancos = [];
   document.getElementById('comp-banco-file').value = '';
-  document.getElementById('comp-banco-preview').style.display = 'none';
+  renderCompLista('comp-banco-lista', compBancos, 'pago');
   document.getElementById('comp-banco-box').style.display = 'none';
   pagosData.push(pago);
   localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
@@ -1276,139 +1448,122 @@ function mostrarComp(pago) {
     +'<div class="comp-total-lbl">TOTAL PAGADO' + (pago.descuento > 0 ? ' (con descuento)' : (pago.bono > 0 ? ' (incluye bono)' : '')) + '</div>'
     +'<div class="comp-est">CANCELADO</div>'
     +'</div>'
-    +(pago.compBanco
-      ? '<div class="comp-banco-section"><div class="comp-banco-title">Comprobante de transferencia</div>'
-        + (pago.compBancoTipo === 'pdf'
-          ? '<div style="padding:16px;text-align:center"><div style="font-size:40px">&#128196;</div>'
-            + '<a href="' + pago.compBanco + '" download="' + (pago.compBancoNombre || ('comprobante_' + pago.id + '.pdf')) + '" style="display:inline-block;margin-top:8px;background:#0078d4;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">Descargar PDF del banco</a></div>'
-          : '<img src="' + pago.compBanco + '">')
-        + '</div>'
-      : '');
+    + (function() {
+        var comps = compsDePago(pago);
+        if (!comps.length) return '';
+        return '<div class="comp-banco-section"><div class="comp-banco-title">Comprobante(s) de transferencia (' + comps.length + ')</div>'
+          + comps.map(function(f, i) {
+              if (f.tipo === 'pdf') {
+                return '<div style="padding:14px;text-align:center;background:var(--white);border-radius:8px;margin-top:8px">'
+                  + '<div style="font-size:34px">&#128196;</div>'
+                  + '<div style="font-size:11px;color:var(--g5);margin:4px 0">' + esc(f.nombre) + '</div>'
+                  + '<a href="' + f.data + '" download="' + (f.nombre || ('comprobante_' + (i+1) + '.pdf')) + '" style="display:inline-block;margin-top:6px;background:#0078d4;color:#fff;padding:8px 16px;border-radius:8px;text-decoration:none;font-weight:700;font-size:12px">Descargar PDF</a>'
+                  + '</div>';
+              }
+              return '<img src="' + f.data + '" style="margin-top:8px">';
+            }).join('')
+          + '</div>';
+      })();
   om('m-comp');
 }
 
-var compBancoBase64 = '';
-var compBancoTipo = '';
-var compBancoNombre = '';
-var editCompBancoBase64 = '';
-var editCompBancoTipo = '';
-var editCompBancoNombre = '';
+var compBancos = [];      // [{data, tipo, nombre}]
+var editCompBancos = [];  // lista en edicion
 
 function toggleCompBanco() {
   var metodo = document.getElementById('pago-metodo').value;
   var box = document.getElementById('comp-banco-box');
   box.style.display = (metodo === 'Transferencia') ? 'block' : 'none';
   if (metodo !== 'Transferencia') {
-    compBancoBase64 = '';
-    document.getElementById('comp-banco-preview').style.display = 'none';
+    compBancos = [];
+    renderCompLista('comp-banco-lista', compBancos, 'pago');
   }
 }
 
-function quitarCompBanco() {
-  compBancoBase64 = '';
-  compBancoTipo = '';
-  compBancoNombre = '';
-  document.getElementById('comp-banco-file').value = '';
-  document.getElementById('comp-banco-preview').style.display = 'none';
-  document.getElementById('comp-banco-img').style.display = 'none';
-  document.getElementById('comp-banco-pdf').style.display = 'none';
+function quitarComp(idx, contexto) {
+  if (contexto === 'edit') {
+    editCompBancos.splice(idx, 1);
+    renderCompLista('edit-comp-banco-lista', editCompBancos, 'edit');
+  } else {
+    compBancos.splice(idx, 1);
+    renderCompLista('comp-banco-lista', compBancos, 'pago');
+  }
 }
 
-// Leer y comprimir imagen del comprobante bancario
+function renderCompLista(contenedorId, lista, contexto) {
+  var c = document.getElementById(contenedorId);
+  if (!c) return;
+  if (!lista.length) {
+    c.innerHTML = '<div style="font-size:12px;color:var(--g4);text-align:center;padding:10px">Sin comprobantes adjuntos</div>';
+    return;
+  }
+  c.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--P);margin-bottom:6px">' + lista.length + ' comprobante(s) adjunto(s)</div>'
+    + lista.map(function(f, i) {
+    var vista = (f.tipo === 'pdf')
+      ? '<div style="width:44px;height:44px;background:var(--white);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">&#128196;</div>'
+      : '<img src="' + f.data + '" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0">';
+    return '<div style="display:flex;align-items:center;gap:8px;background:var(--white);padding:8px;border-radius:var(--rsm);margin-bottom:6px">'
+      + vista
+      + '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700;color:var(--g6);word-break:break-all">' + esc(f.nombre) + '</div>'
+      + '<div style="font-size:10px;color:var(--g4)">' + (f.tipo === 'pdf' ? 'PDF' : 'Imagen') + '</div></div>'
+      + '<button class="bic" style="color:var(--D);font-size:16px" data-quitar="' + i + '" data-ctx="' + contexto + '">&#128465;</button>'
+      + '</div>';
+  }).join('');
+  c.querySelectorAll('[data-quitar]').forEach(function(btn) {
+    btn.addEventListener('click', function() { quitarComp(parseInt(this.dataset.quitar), this.dataset.ctx); });
+  });
+}
+
+// Procesa varios archivos y los agrega a la lista indicada
+function procesarArchivos(files, lista, contenedorId, contexto) {
+  var pendientes = files.length;
+  Array.prototype.forEach.call(files, function(file) {
+    var esPDF = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (esPDF) {
+      var rp = new FileReader();
+      rp.onload = function(ev) {
+        lista.push({ data: ev.target.result, tipo: 'pdf', nombre: file.name });
+        pendientes--;
+        if (pendientes === 0) renderCompLista(contenedorId, lista, contexto);
+      };
+      rp.readAsDataURL(file);
+    } else {
+      var r = new FileReader();
+      r.onload = function(ev) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var maxW = 900, w = img.width, h = img.height;
+          if (w > maxW) { h = h * maxW / w; w = maxW; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          lista.push({ data: canvas.toDataURL('image/jpeg', 0.72), tipo: 'imagen', nombre: file.name });
+          pendientes--;
+          if (pendientes === 0) renderCompLista(contenedorId, lista, contexto);
+        };
+        img.onerror = function() { pendientes--; if (pendientes === 0) renderCompLista(contenedorId, lista, contexto); };
+        img.src = ev.target.result;
+      };
+      r.readAsDataURL(file);
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   var fileInput = document.getElementById('comp-banco-file');
   if (fileInput) {
     fileInput.addEventListener('change', function(e) {
-      var file = e.target.files[0];
-      if (!file) return;
-      var esPDF = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-      var imgEl = document.getElementById('comp-banco-img');
-      var pdfEl = document.getElementById('comp-banco-pdf');
-      var prevEl = document.getElementById('comp-banco-preview');
-      if (esPDF) {
-        // PDF: guardar tal cual en base64 (sin comprimir)
-        var readerPdf = new FileReader();
-        readerPdf.onload = function(ev) {
-          compBancoBase64 = ev.target.result;
-          compBancoTipo = 'pdf';
-          compBancoNombre = file.name;
-          imgEl.style.display = 'none';
-          pdfEl.style.display = 'block';
-          document.getElementById('comp-banco-pdf-name').textContent = file.name;
-          prevEl.style.display = 'block';
-        };
-        readerPdf.readAsDataURL(file);
-      } else {
-        // Imagen: comprimir a max 800px
-        var reader = new FileReader();
-        reader.onload = function(ev) {
-          var img = new Image();
-          img.onload = function() {
-            var canvas = document.createElement('canvas');
-            var maxW = 800;
-            var w = img.width, h = img.height;
-            if (w > maxW) { h = h * maxW / w; w = maxW; }
-            canvas.width = w; canvas.height = h;
-            var ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            compBancoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-            compBancoTipo = 'imagen';
-            compBancoNombre = file.name;
-            imgEl.src = compBancoBase64;
-            imgEl.style.display = 'block';
-            pdfEl.style.display = 'none';
-            prevEl.style.display = 'block';
-          };
-          img.src = ev.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
+      if (!e.target.files.length) return;
+      procesarArchivos(e.target.files, compBancos, 'comp-banco-lista', 'pago');
+      this.value = '';
     });
   }
-  // Handler para el comprobante en EDICION
   var editFileInput = document.getElementById('edit-comp-banco-file');
   if (editFileInput) {
     editFileInput.addEventListener('change', function(e) {
-      var file = e.target.files[0];
-      if (!file) return;
-      var esPDF = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
-      var imgEl = document.getElementById('edit-comp-banco-img');
-      var pdfEl = document.getElementById('edit-comp-banco-pdf');
-      var prevEl = document.getElementById('edit-comp-banco-preview');
-      if (esPDF) {
-        var rp = new FileReader();
-        rp.onload = function(ev) {
-          editCompBancoBase64 = ev.target.result;
-          editCompBancoTipo = 'pdf';
-          editCompBancoNombre = file.name;
-          imgEl.style.display = 'none';
-          pdfEl.style.display = 'block';
-          document.getElementById('edit-comp-banco-pdf-name').textContent = file.name;
-          prevEl.style.display = 'block';
-        };
-        rp.readAsDataURL(file);
-      } else {
-        var r = new FileReader();
-        r.onload = function(ev) {
-          var img = new Image();
-          img.onload = function() {
-            var canvas = document.createElement('canvas');
-            var maxW = 800, w = img.width, h = img.height;
-            if (w > maxW) { h = h * maxW / w; w = maxW; }
-            canvas.width = w; canvas.height = h;
-            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-            editCompBancoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-            editCompBancoTipo = 'imagen';
-            editCompBancoNombre = file.name;
-            imgEl.src = editCompBancoBase64;
-            imgEl.style.display = 'block';
-            pdfEl.style.display = 'none';
-            prevEl.style.display = 'block';
-          };
-          img.src = ev.target.result;
-        };
-        r.readAsDataURL(file);
-      }
+      if (!e.target.files.length) return;
+      procesarArchivos(e.target.files, editCompBancos, 'edit-comp-banco-lista', 'edit');
+      this.value = '';
     });
   }
 });
@@ -1422,75 +1577,71 @@ async function descargarPDFCompleto() {
   try {
     var trab = (pagoActual.trabajador||'').replace(/[^a-zA-Z0-9 ]/g,'').trim().replace(/ /g,'_');
     var nombrePDF = 'PAGO_' + trab + '_' + pagoActual.id + '.pdf';
+    var comps = compsDePago(pagoActual);
 
-    // PASO 1: Convertir el recibo SATMEC (sin la imagen del banco) a PDF con jsPDF
+    // PASO 1: recibo SATMEC a PDF (ocultando la seccion de comprobantes)
     var jsPDFlib = window.jspdf.jsPDF;
     var pdf = new jsPDFlib('p', 'mm', 'a4');
-
-    // Capturar solo la parte del recibo (sin la seccion del banco que puede ser PDF)
     var compBody = document.getElementById('comp-body');
     var bancoSection = compBody.querySelector('.comp-banco-section');
-    var bancoHTML = '';
-    if (bancoSection) { bancoHTML = bancoSection.outerHTML; bancoSection.style.display = 'none'; }
-
+    if (bancoSection) bancoSection.style.display = 'none';
     var canvas = await html2canvas(compBody, {scale:2, backgroundColor:'#ffffff'});
     if (bancoSection) bancoSection.style.display = '';
 
-    var imgData = canvas.toDataURL('image/jpeg', 0.92);
     var pw = pdf.internal.pageSize.getWidth();
     var ph = pdf.internal.pageSize.getHeight();
     var imgW = pw - 20;
     var imgH = canvas.height * imgW / canvas.width;
-    var y = 10;
     if (imgH > ph - 20) imgH = ph - 20;
-    pdf.addImage(imgData, 'JPEG', 10, y, imgW, imgH);
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, imgW, imgH);
 
-    // PASO 2: Si el comprobante del banco es IMAGEN, agregarla como nueva pagina
-    if (pagoActual.compBanco && pagoActual.compBancoTipo === 'imagen') {
+    // PASO 2: agregar TODAS las imagenes como paginas nuevas
+    var imagenes = comps.filter(function(f){ return f.tipo !== 'pdf'; });
+    for (var i = 0; i < imagenes.length; i++) {
       pdf.addPage();
-      pdf.setFontSize(12);
-      pdf.text('Comprobante de transferencia bancaria', 10, 15);
+      pdf.setFontSize(11);
+      pdf.text('Comprobante ' + (i+1) + ' de ' + comps.length + ' - ' + (imagenes[i].nombre||''), 10, 14);
       var bImg = new Image();
-      await new Promise(function(res){ bImg.onload = res; bImg.src = pagoActual.compBanco; });
+      await new Promise(function(res){ bImg.onload = res; bImg.onerror = res; bImg.src = imagenes[i].data; });
       var bw = pw - 20;
       var bh = bImg.height * bw / bImg.width;
       if (bh > ph - 30) { bh = ph - 30; bw = bImg.width * bh / bImg.height; }
-      pdf.addImage(pagoActual.compBanco, 'JPEG', 10, 22, bw, bh);
+      pdf.addImage(imagenes[i].data, 'JPEG', 10, 22, bw, bh);
     }
 
-    // Obtener el PDF del recibo como bytes
     var reciboPdfBytes = pdf.output('arraybuffer');
 
-    // PASO 3: Si el comprobante del banco es PDF, unirlo con pdf-lib
-    if (pagoActual.compBanco && pagoActual.compBancoTipo === 'pdf') {
+    // PASO 3: unir TODOS los PDFs adjuntos
+    var pdfsAdjuntos = comps.filter(function(f){ return f.tipo === 'pdf'; });
+    if (pdfsAdjuntos.length) {
       var PDFLib = window.PDFLib;
       var mergedPdf = await PDFLib.PDFDocument.create();
-      // Agregar paginas del recibo
       var reciboDoc = await PDFLib.PDFDocument.load(reciboPdfBytes);
       var reciboPages = await mergedPdf.copyPages(reciboDoc, reciboDoc.getPageIndices());
       reciboPages.forEach(function(p){ mergedPdf.addPage(p); });
-      // Agregar paginas del comprobante del banco
-      var bancoBase64 = pagoActual.compBanco.split(',')[1];
-      var bancoBytes = Uint8Array.from(atob(bancoBase64), function(c){ return c.charCodeAt(0); });
-      var bancoDoc = await PDFLib.PDFDocument.load(bancoBytes);
-      var bancoPages = await mergedPdf.copyPages(bancoDoc, bancoDoc.getPageIndices());
-      bancoPages.forEach(function(p){ mergedPdf.addPage(p); });
-      // Descargar
+      for (var j = 0; j < pdfsAdjuntos.length; j++) {
+        try {
+          var b64 = pdfsAdjuntos[j].data.split(',')[1];
+          var bytes = Uint8Array.from(atob(b64), function(c){ return c.charCodeAt(0); });
+          var doc = await PDFLib.PDFDocument.load(bytes);
+          var pages = await mergedPdf.copyPages(doc, doc.getPageIndices());
+          pages.forEach(function(p){ mergedPdf.addPage(p); });
+        } catch(e) { /* si un PDF falla, continuar con los demas */ }
+      }
       var mergedBytes = await mergedPdf.save();
       await descargarBytes(mergedBytes, nombrePDF);
     } else {
-      // Solo el recibo (con o sin imagen)
       await descargarBytes(new Uint8Array(reciboPdfBytes), nombrePDF);
     }
 
-    showAlert('ok', 'PDF generado: ' + nombrePDF, 'nom');
+    showAlert('ok', 'PDF generado con ' + comps.length + ' comprobante(s): ' + nombrePDF, 'nom');
   } catch(err) {
     showAlert('err', 'Error al generar PDF: ' + err.message, 'nom');
   }
   btn.textContent = txtOrig; btn.disabled = false;
 }
 
-async function descargarBytes(bytes, nombre) {
+function descargarBytes(bytes, nombre) {
   var blob = new Blob([bytes], {type:'application/pdf'});
   // Si el navegador soporta elegir carpeta (Chrome/Edge), preguntar donde guardar
   if (window.showSaveFilePicker) {
@@ -1535,9 +1686,11 @@ function editarPagoActual() {
     '<div style="font-size:15px;font-weight:800;color:var(--P)">' + esc(p.trabajador) + '</div>'
     + '<div style="font-size:12px;color:var(--g4);margin-top:4px">' + p.id + '</div>'
     + '<div style="font-size:12px;color:var(--g5);margin-top:6px">Subtotal (horas): $' + (p.montoNormal + p.montoExtra).toFixed(2) + '</div>';
+  editCompBancos = compsDePago(p).slice();
   cm('m-comp');
   om('m-edit-pago');
   toggleEditCompBanco();
+  renderCompLista('edit-comp-banco-lista', editCompBancos, 'edit');
   actualizarEditTotal();
 }
 
@@ -1577,16 +1730,13 @@ function guardarEdicionPago() {
   if (nuevoHasta) p.hasta = nuevoHasta;
   p.metodo = document.getElementById('edit-pago-metodo').value;
   p.notas = document.getElementById('edit-pago-notas').value;
-  // Si subio nuevo comprobante en la edicion
-  if (editCompBancoBase64) {
-    p.compBanco = editCompBancoBase64;
-    p.compBancoTipo = editCompBancoTipo;
-    p.compBancoNombre = editCompBancoNombre;
-  }
+  // Guardar la lista de comprobantes editada
+  p.compBancos = editCompBancos.slice();
+  delete p.compBanco; delete p.compBancoTipo; delete p.compBancoNombre;
   pagosData[idx] = p;
   localStorage.setItem('satmec_pagos', JSON.stringify(pagosData));
   // Resetear comprobante de edicion
-  editCompBancoBase64 = ''; editCompBancoTipo = ''; editCompBancoNombre = '';
+  editCompBancos = [];
   cm('m-edit-pago');
   renderPagos();
   if (typeof renderTablaReg === 'function' && filtReg) { renderTablaReg(); renderStatsReg(); }
@@ -1662,7 +1812,7 @@ function renderPagos() {
       +(p.descuento>0?' | Descuento: $'+p.descuento.toFixed(2)+(p.descMotivo?' ('+esc(p.descMotivo)+')':''):'')
       +(p.proyecto ? '<br>Proyecto: ' + esc(p.proyecto) : '')
       +(p.notas    ? '<br>Notas: '    + esc(p.notas)    : '')
-      +(p.compBanco ? '<br><span style="color:var(--S);font-weight:700">Comprobante de transferencia adjunto</span>' : '')
+      +(compsDePago(p).length ? '<br><span style="color:var(--S);font-weight:700">' + compsDePago(p).length + ' comprobante(s) adjunto(s)</span>' : '')
       +'</div>'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<span style="font-size:10px;color:var(--g4)">' + p.id + '</span>'
